@@ -4,54 +4,45 @@
 import os
 import logging
 import requests
-from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationError
+from typing import Dict, List, Any
 from dotenv import load_dotenv
 from cachetools import cached, TTLCache
 
 # ==============================================================================
 #  Configuration & Initial Setup
 # ==============================================================================
-# Configure structured logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Load environment variables from the .env file in the same directory
 load_dotenv()
 
-# Get the API key from environment variables for security
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 if not ALPHA_VANTAGE_API_KEY or ALPHA_VANTAGE_API_KEY == "demo":
     raise RuntimeError("A valid ALPHA_VANTAGE_API_KEY must be set in the .env file.")
 
-# Define constants
 ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 
-# Initialize the FastAPI application
 app = FastAPI(
     title="WindBorne Vendor API",
     description="An API to fetch and analyze financial data for potential vendors.",
-    version="1.0.0",
+    version="1.1.0", # Version bump for new features
 )
 
-# Create a cache that stores up to 100 items for 1 hour (3600 seconds)
-# This prevents us from hitting the Alpha Vantage API rate limit too quickly
-cache = TTLCache(maxsize=100, ttl=3600)
-
+# A single cache for all our endpoints
+cache = TTLCache(maxsize=200, ttl=3600) # Increased size for more endpoints
 
 # ==============================================================================
-#  CORS (Cross-Origin Resource Sharing) Middleware
+#  CORS Middleware
 # ==============================================================================
-# This allows our frontend application (running on localhost:5173) to
-# communicate with this backend server.
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
-    # You can add the URL of your deployed frontend here later
+    # Add your deployed frontend URL here later
 ]
 
 app.add_middleware(
@@ -66,55 +57,72 @@ app.add_middleware(
 # ==============================================================================
 #  Pydantic Data Models (API Contract)
 # ==============================================================================
-# Helper functions to gracefully handle messy data from the external API.
-# Alpha Vantage can return "None" or other non-numeric values for numeric fields.
+
+# --- Helper functions for robust data cleaning ---
 def to_float(value: Any) -> float:
-    """Safely convert a value to float, defaulting to 0.0 on failure."""
-    if value is None or value in {"None", ""}:
-        return 0.0
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return 0.0
+    if value is None or value in {"None", ""}: return 0.0
+    try: return float(value)
+    except (ValueError, TypeError): return 0.0
 
 def to_int(value: Any) -> int:
-    """Safely convert a value to int, defaulting to 0 on failure."""
-    if value is None or value in {"None", ""}:
-        return 0
-    try:
-        # Convert to float first to handle string numbers like "123.45"
-        return int(float(value))
-    except (ValueError, TypeError):
-        return 0
+    if value is None or value in {"None", ""}: return 0
+    try: return int(float(value))
+    except (ValueError, TypeError): return 0
 
-# This defines the exact structure and data types of the response we will send.
-# FastAPI uses this for automatic validation and documentation.
-# The `Field(alias=...)` is crucial for mapping the PascalCase from the API
-# to our preferred snake_case.
+# --- Models for Vendor Overview ---
 class VendorOverview(BaseModel):
     symbol: str = Field(alias="Symbol")
     name: str = Field(alias="Name")
-    description: str = Field(alias="Description", default="")
     market_cap: int = Field(alias="MarketCapitalization")
     pe_ratio: float = Field(alias="PERatio")
-    dividend_yield: float = Field(alias="DividendYield")
     ebitda: int = Field(alias="EBITDA")
 
-    # These validators run *before* Pydantic tries to enforce the type hints.
-    # This allows us to clean up the messy data from the API first.
     @field_validator('market_cap', 'ebitda', mode='before')
-    @classmethod
-    def validate_int_fields(cls, v: Any) -> int:
-        return to_int(v)
+    def clean_int_fields(cls, v): return to_int(v)
 
-    @field_validator('pe_ratio', 'dividend_yield', mode='before')
-    @classmethod
-    def validate_float_fields(cls, v: Any) -> float:
-        return to_float(v)
-    
-    class Config:
-        # Allows the model to be created from arbitrary class instances
-        from_attributes = True
+    @field_validator('pe_ratio', mode='before')
+    def clean_float_fields(cls, v): return to_float(v)
+
+
+# --- Models for Income Statement (Deep Dive) ---
+class IncomeReport(BaseModel):
+    fiscal_date_ending: str = Field(alias="fiscalDateEnding")
+    total_revenue: int = Field(alias="totalRevenue")
+    net_income: int = Field(alias="netIncome")
+
+    @field_validator('total_revenue', 'net_income', mode='before')
+    def clean_income_fields(cls, v): return to_int(v)
+
+class VendorIncomeStatement(BaseModel):
+    symbol: str
+    annual_reports: List[IncomeReport]
+
+# --- Models for Daily Series (Stock Chart) ---
+class TimeSeriesData(BaseModel):
+    date: str
+    close: float
+
+    @field_validator('close', mode='before')
+    def clean_close_field(cls, v): return to_float(v)
+
+class VendorDailySeries(BaseModel):
+    symbol: str
+    time_series: List[TimeSeriesData]
+
+# --- Models for Symbol Search ---
+class SearchResult(BaseModel):
+    symbol: str = Field(alias="1. symbol")
+    name: str = Field(alias="2. name")
+    type: str = Field(alias="3. type")
+    region: str = Field(alias="4. region")
+    market_open: str = Field(alias="5. marketOpen")
+    market_close: str = Field(alias="6. marketClose")
+    timezone: str = Field(alias="7. timezone")
+    currency: str = Field(alias="8. currency")
+    match_score: float = Field(alias="9. matchScore")
+
+class VendorSearchResponse(BaseModel):
+    results: List[SearchResult]
 
 # Custom exception for our service layer to keep it decoupled from HTTP
 class APIError(Exception):
@@ -126,67 +134,134 @@ class APIError(Exception):
 # ==============================================================================
 #  Core Service Logic (with Caching)
 # ==============================================================================
-# This function does the actual work of fetching data. The @cached decorator
-# automatically handles storing and retrieving results from our cache.
+# Generic function to call the API and handle common errors
 @cached(cache)
-def fetch_vendor_overview_data(ticker: str) -> dict:
-    """
-    Fetches raw overview data from Alpha Vantage for a given ticker.
-    Raises APIError for known issues.
-    """
-    logger.info(f"CACHE MISS: Fetching fresh data for {ticker} from Alpha Vantage...")
-    params = {
-        "function": "OVERVIEW",
-        "symbol": ticker,
-        "apikey": ALPHA_VANTAGE_API_KEY,
-    }
+def fetch_alpha_vantage_data(params: frozenset) -> dict:
+    """A cached, generic function to fetch data from Alpha Vantage."""
+    # Convert frozenset back to dict for requests
+    params_dict = dict(params)
+    func = params_dict.get('function', 'UNKNOWN')
+    symbol = params_dict.get('symbol', '')
+    logger.info(f"CACHE MISS: Fetching fresh data for function '{func}' symbol '{symbol}'...")
+    
+    # Add the API key to every request
+    params_dict["apikey"] = ALPHA_VANTAGE_API_KEY
+    
     try:
-        response = requests.get(ALPHA_VANTAGE_BASE_URL, params=params, timeout=10)
-        response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
+        response = requests.get(ALPHA_VANTAGE_BASE_URL, params=params_dict, timeout=10)
+        response.raise_for_status()
         data = response.json()
 
-        # Handle specific API messages
+        if not data:
+            raise APIError("No data returned from API.", 404)
         if "Information" in data:
             raise APIError(f"API rate limit reached or invalid key. Info: {data['Information']}", 429)
-        if not data or "Symbol" not in data:
-            raise APIError(f"No data found for ticker '{ticker}'. It may be an invalid symbol.", 404)
-        
+        if "Error Message" in data:
+            raise APIError(f"Invalid API call. Error: {data['Error Message']}", 400)
+
         return data
-        
     except requests.exceptions.RequestException as e:
-        # This catches network errors (e.g., DNS failure, refused connection)
-        logger.error(f"External API communication error for {ticker}: {e}")
+        logger.error(f"External API communication error for {func} {symbol}: {e}")
         raise APIError(f"Error communicating with external API: {e}", 503)
 
 # ==============================================================================
 #  API Endpoints
 # ==============================================================================
+
+# --- Main Dashboard Endpoint ---
 @app.get("/", tags=["Status"])
 def read_root():
     """A simple health check endpoint to confirm the API is running."""
     return {"status": "API is running", "docs_url": "/docs"}
 
-
+# --- Main Dashboard Endpoint ---
 @app.get("/api/vendor/{ticker}/overview", response_model=VendorOverview, tags=["Vendors"])
 def get_vendor_overview(ticker: str):
-    """
-    Fetches, validates, and returns curated overview data for a given stock ticker.
-    The response is validated against the `VendorOverview` model.
-    """
+    """Fetches curated overview data for the main dashboard table."""
     try:
-        # Make the ticker input case-insensitive for a better user experience
-        raw_data = fetch_vendor_overview_data(ticker.upper())
-        # Pydantic automatically validates the raw_data against the VendorOverview model.
-        # If it fails, it will raise a ValidationError.
+        params = frozenset({"function": "OVERVIEW", "symbol": ticker.upper()}.items())
+        raw_data = fetch_alpha_vantage_data(params)
         return VendorOverview.model_validate(raw_data)
     except APIError as e:
-        # Translate our custom service-layer error into an HTTP exception
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except ValidationError as e:
-        # This happens if the data from the API is structured unexpectedly
-        logger.error(f"Pydantic validation failed for {ticker}: {e}")
-        raise HTTPException(status_code=422, detail="Data validation failed: received unexpected data format from external API.")
+        logger.error(f"Validation failed for {ticker} overview: {e}")
+        raise HTTPException(status_code=422, detail="Unexpected data format from external API.")
     except Exception as e:
-        # Catch-all for any other unexpected errors
-        logger.critical(f"An unexpected server error occurred for ticker {ticker}: {e}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred.")
+        logger.critical(f"Unexpected error for {ticker} overview: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
+
+# --- Deep Dive Modal Endpoints ---
+@app.get("/api/vendor/{ticker}/income-statement", response_model=VendorIncomeStatement, tags=["Vendors"])
+def get_income_statement(ticker: str):
+    """Fetches annual income statement data for the deep-dive modal."""
+    try:
+        params = frozenset({"function": "INCOME_STATEMENT", "symbol": ticker.upper()}.items())
+        raw_data = fetch_alpha_vantage_data(params)
+        
+        # Manually construct the response while validating the nested list
+        validated_reports = [IncomeReport.model_validate(report) for report in raw_data.get("annualReports", [])]
+        
+        return VendorIncomeStatement(
+            symbol=raw_data.get("symbol", ticker.upper()),
+            annual_reports=validated_reports
+        )
+    except APIError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except ValidationError as e:
+        logger.error(f"Validation failed for {ticker} income statement: {e}")
+        raise HTTPException(status_code=422, detail="Unexpected data format for income statement.")
+    except Exception as e:
+        logger.critical(f"Unexpected error for {ticker} income statement: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
+
+@app.get("/api/vendor/{ticker}/daily-series", response_model=VendorDailySeries, tags=["Vendors"])
+def get_daily_series(ticker: str):
+    """Fetches the last 100 days of stock data for the deep-dive chart."""
+    try:
+        params = frozenset({"function": "TIME_SERIES_DAILY", "symbol": ticker.upper(), "outputsize": "compact"}.items())
+        raw_data = fetch_alpha_vantage_data(params)
+        
+        time_series_raw = raw_data.get("Time Series (Daily)", {})
+        # Transform the data from a dict of dates to a list of objects, with validation
+        time_series_list = [
+            TimeSeriesData.model_validate({"date": date, "close": details["4. close"]})
+            for date, details in time_series_raw.items()
+        ]
+        
+        return VendorDailySeries(
+            symbol=raw_data.get("Meta Data", {}).get("2. Symbol", ticker.upper()),
+            time_series=time_series_list
+        )
+    except (APIError, ValidationError) as e:
+        status = e.status_code if isinstance(e, APIError) else 422
+        detail = e.message if isinstance(e, APIError) else "Unexpected data format for daily series."
+        logger.error(f"Failed to get daily series for {ticker}: {detail}")
+        raise HTTPException(status_code=status, detail=detail)
+    except Exception as e:
+        logger.critical(f"Unexpected error for {ticker} daily series: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
+
+
+# --- Dynamic Search Endpoint ---
+@app.get("/api/search/{keywords}", response_model=VendorSearchResponse, tags=["Search"])
+def search_vendors(keywords: str):
+    """Searches for stock symbols and names matching the given keywords."""
+    try:
+        params = frozenset({"function": "SYMBOL_SEARCH", "keywords": keywords}.items())
+        raw_data = fetch_alpha_vantage_data(params)
+        
+        # Filter for US markets and validate each result
+        us_results = [
+            SearchResult.model_validate(item) for item in raw_data.get("bestMatches", []) 
+            if item.get("4. region") == "United States"
+        ]
+        return VendorSearchResponse(results=us_results)
+    except (APIError, ValidationError) as e:
+        status = e.status_code if isinstance(e, APIError) else 422
+        detail = e.message if isinstance(e, APIError) else "Unexpected data format for search results."
+        logger.error(f"Failed to search for {keywords}: {detail}")
+        raise HTTPException(status_code=status, detail=detail)
+    except Exception as e:
+        logger.critical(f"Unexpected error during search for {keywords}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
