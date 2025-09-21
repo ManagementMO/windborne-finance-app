@@ -17,9 +17,12 @@ from cachetools import cached, TTLCache
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
-ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
+# LOAD API KEY FROM .ENV FILE
+def load_environment():
+    """Load environment variables from .env file"""
+    load_dotenv(override=True)  # override=True ensures new values override existing ones
+    return os.getenv("ALPHA_VANTAGE_API_KEY")
+ALPHA_VANTAGE_API_KEY = load_environment()
 if not ALPHA_VANTAGE_API_KEY or ALPHA_VANTAGE_API_KEY == "demo":
     raise RuntimeError("A valid ALPHA_VANTAGE_API_KEY must be set in the .env file.")
 
@@ -186,6 +189,18 @@ def read_root():
     """A simple health check endpoint to confirm the API is running."""
     return {"status": "API is running", "docs_url": "/docs"}
 
+@app.post("/reload-env", tags=["Status"])
+def reload_environment_variables():
+    """Reload environment variables from .env file without restarting the server."""
+    global ALPHA_VANTAGE_API_KEY
+    try:
+        ALPHA_VANTAGE_API_KEY = load_environment()
+        if not ALPHA_VANTAGE_API_KEY or ALPHA_VANTAGE_API_KEY == "demo":
+            return {"status": "error", "message": "Invalid API key after reload"}
+        return {"status": "success", "message": "Environment variables reloaded successfully"}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to reload environment variables: {str(e)}"}
+
 @app.get("/test/{ticker}", tags=["Status"])
 def test_api_connection(ticker: str):
     """Test endpoint to debug Alpha Vantage connection."""
@@ -310,4 +325,4 @@ def search_vendors(keywords: str):
 # ==============================================================================
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info", reload=True)
