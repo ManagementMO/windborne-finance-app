@@ -4,3 +4,7 @@ apps/api/__pycache__/
 apps/web/dist/
 apps/web/node_modules/
 apps/web/dist-ssr/
+node_modules/
+node_modules/*
+node_modules/**/*
+node_modules/**/**/*
