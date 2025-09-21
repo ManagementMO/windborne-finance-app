@@ -3,6 +3,7 @@ import { useQueries } from '@tanstack/react-query';
 import { Cloud, Download } from 'lucide-react';
 import { CSVLink } from 'react-csv';
 import { vendorApi } from './lib/api';
+import { useMockMode } from './hooks/useMockMode';
 import { VendorOverview } from './types/vendor';
 import { VendorSearch } from './components/dashboard/VendorSearch';
 import { VendorTable } from './components/dashboard/VendorTable';
@@ -16,13 +17,14 @@ function App() {
   const [activeTickers, setActiveTickers] = useState<string[]>(['TEL', 'ST', 'DD', 'CE', 'LYB']);
   const [selectedVendor, setSelectedVendor] = useState<VendorOverview | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const isMockMode = useMockMode();
+  
   const vendorQueries = useQueries({
     queries: activeTickers.map(ticker => ({
-      queryKey: ['vendorOverview', ticker],
+      queryKey: ['vendorOverview', ticker, isMockMode ? 'mock' : 'live'],
       queryFn: () => vendorApi.getOverview(ticker),
-      staleTime: 5 * 60 * 1000,
-      retry: 1,
+      staleTime: isMockMode ? Infinity : 5 * 60 * 1000, // Cache mock data indefinitely
+      retry: isMockMode ? 0 : 1, // Don't retry mock data
       throwOnError: false,
     })),
   });

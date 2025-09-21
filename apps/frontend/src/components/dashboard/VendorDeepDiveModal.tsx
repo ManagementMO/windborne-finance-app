@@ -2,8 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { vendorApi } from '../../lib/api';
+import { useMockMode } from '../../hooks/useMockMode';
 import { VendorOverview } from '../../types/vendor';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, formatNumber } from '../../lib/utils';
 import { Skeleton } from '../ui/Skeleton';
 
 interface VendorDeepDiveModalProps {
@@ -13,27 +14,30 @@ interface VendorDeepDiveModalProps {
 }
 
 export function VendorDeepDiveModal({ vendor, isOpen, onClose }: VendorDeepDiveModalProps) {
+  const isMockMode = useMockMode();
+  
   // Validate vendor data before making API calls
   const isValidVendor = !!(vendor && 
     typeof vendor.symbol === 'string' && 
     vendor.symbol.length > 0 && 
     vendor.symbol !== 'undefined' &&
     vendor.symbol !== 'null');
+  
   const { data: incomeData, isLoading: isLoadingIncome, isError: isIncomeError } = useQuery({
-    queryKey: ['vendorIncome', vendor?.symbol],
+    queryKey: ['vendorIncome', vendor?.symbol, isMockMode ? 'mock' : 'live'],
     queryFn: () => vendorApi.getIncomeStatement(vendor!.symbol),
     enabled: isOpen && isValidVendor,
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
+    staleTime: isMockMode ? Infinity : 5 * 60 * 1000,
+    retry: isMockMode ? 0 : 1,
     throwOnError: false,
   });
 
   const { data: dailyData, isLoading: isLoadingDaily, isError: isDailyError } = useQuery({
-    queryKey: ['vendorDaily', vendor?.symbol],
+    queryKey: ['vendorDaily', vendor?.symbol, isMockMode ? 'mock' : 'live'],
     queryFn: () => vendorApi.getDailySeries(vendor!.symbol),
     enabled: isOpen && isValidVendor,
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
+    staleTime: isMockMode ? Infinity : 5 * 60 * 1000,
+    retry: isMockMode ? 0 : 1,
     throwOnError: false,
   });
 
@@ -201,7 +205,7 @@ export function VendorDeepDiveModal({ vendor, isOpen, onClose }: VendorDeepDiveM
               <div className="bg-slate-50 rounded-lg p-4">
                 <p className="text-xs text-slate-500 uppercase tracking-wider">P/E Ratio</p>
                 <p className="text-lg font-semibold text-slate-800">
-                  {vendor.pe_ratio > 0 ? vendor.pe_ratio.toFixed(2) : 'N/A'}
+                  {vendor.pe_ratio > 0 ? formatNumber(vendor.pe_ratio, 2) : 'N/A'}
                 </p>
               </div>
               <div className="bg-slate-50 rounded-lg p-4">

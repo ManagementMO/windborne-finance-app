@@ -5,6 +5,12 @@ import {
   VendorDailySeries, 
   VendorSearchResponse 
 } from '../types/vendor';
+import { 
+  mockVendorOverviews, 
+  mockIncomeStatement, 
+  mockDailySeries, 
+  mockSearchResults 
+} from './mockData';
 
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
@@ -26,18 +32,52 @@ api.interceptors.response.use(
   }
 );
 
+// Global flag to control mock mode with localStorage persistence
+let useMockData = localStorage.getItem('windborne-mock-mode') === 'true';
+
+export const setMockMode = (enabled: boolean) => {
+  useMockData = enabled;
+  localStorage.setItem('windborne-mock-mode', enabled.toString());
+  console.log(`💾 Mock mode ${enabled ? 'enabled' : 'disabled'} and saved to localStorage`);
+};
+
+export const getMockMode = () => useMockData;
+
 export const vendorApi = {
-  getOverview: (ticker: string): Promise<VendorOverview> =>
-    api.get(`/vendor/${ticker}/overview`).then(res => res.data),
+  getOverview: (ticker: string): Promise<VendorOverview> => {
+    if (useMockData) {
+      console.log(`🎭 Mock mode: Fetching overview for ${ticker}`);
+      const mockData = mockVendorOverviews.find(v => v.symbol === ticker.toUpperCase());
+      const result = mockData || mockVendorOverviews[0];
+      console.log(`🎭 Mock data returned:`, result);
+      return Promise.resolve(result);
+    }
+    return api.get(`/vendor/${ticker}/overview`).then(res => res.data);
+  },
     
-  getIncomeStatement: (ticker: string): Promise<VendorIncomeStatement> =>
-    api.get(`/vendor/${ticker}/income-statement`).then(res => res.data),
+  getIncomeStatement: (ticker: string): Promise<VendorIncomeStatement> => {
+    if (useMockData) {
+      console.log(`🎭 Mock mode: Fetching income statement for ${ticker}`);
+      return Promise.resolve(mockIncomeStatement(ticker.toUpperCase()));
+    }
+    return api.get(`/vendor/${ticker}/income-statement`).then(res => res.data);
+  },
     
-  getDailySeries: (ticker: string): Promise<VendorDailySeries> =>
-    api.get(`/vendor/${ticker}/daily-series`).then(res => res.data),
+  getDailySeries: (ticker: string): Promise<VendorDailySeries> => {
+    if (useMockData) {
+      console.log(`🎭 Mock mode: Fetching daily series for ${ticker}`);
+      return Promise.resolve(mockDailySeries(ticker.toUpperCase()));
+    }
+    return api.get(`/vendor/${ticker}/daily-series`).then(res => res.data);
+  },
     
-  searchVendors: (keywords: string): Promise<VendorSearchResponse> =>
-    api.get(`/search/${keywords}`).then(res => res.data),
+  searchVendors: (keywords: string): Promise<VendorSearchResponse> => {
+    if (useMockData) {
+      console.log(`🎭 Mock mode: Searching for "${keywords}"`);
+      return Promise.resolve(mockSearchResults(keywords));
+    }
+    return api.get(`/search/${keywords}`).then(res => res.data);
+  },
 };
 
 export default api;

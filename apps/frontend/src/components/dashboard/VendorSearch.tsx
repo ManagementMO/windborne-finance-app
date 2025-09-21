@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { vendorApi } from '../../lib/api';
+import { useMockMode } from '../../hooks/useMockMode';
 import { useDebounce } from '../../hooks/useDebounce';
 import { SearchResult } from '../../types/vendor';
 
@@ -13,14 +14,15 @@ interface VendorSearchProps {
 export function VendorSearch({ onAddVendor, activeTickers }: VendorSearchProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const isMockMode = useMockMode();
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const { data: searchResults, isLoading, isError } = useQuery({
-    queryKey: ['vendorSearch', debouncedSearchTerm],
+    queryKey: ['vendorSearch', debouncedSearchTerm, isMockMode ? 'mock' : 'live'],
     queryFn: () => vendorApi.searchVendors(debouncedSearchTerm),
     enabled: debouncedSearchTerm.length > 2,
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
+    staleTime: isMockMode ? Infinity : 5 * 60 * 1000,
+    retry: isMockMode ? 0 : 1,
     throwOnError: false,
   });
 
