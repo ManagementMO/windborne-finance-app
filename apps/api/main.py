@@ -60,14 +60,18 @@ app.add_middleware(
 
 # --- Helper functions for robust data cleaning ---
 def to_float(value: Any) -> float:
-    if value is None or value in {"None", ""}: return 0.0
+    if value is None or value in {"None", "", "N/A", "-"}: return 0.0
     try: return float(value)
-    except (ValueError, TypeError): return 0.0
+    except (ValueError, TypeError): 
+        logger.warning(f"Could not convert to float: {value}")
+        return 0.0
 
 def to_int(value: Any) -> int:
-    if value is None or value in {"None", ""}: return 0
+    if value is None or value in {"None", "", "N/A", "-"}: return 0
     try: return int(float(value))
-    except (ValueError, TypeError): return 0
+    except (ValueError, TypeError): 
+        logger.warning(f"Could not convert to int: {value}")
+        return 0
 
 # --- Models for Vendor Overview ---
 class VendorOverview(BaseModel):
@@ -77,11 +81,19 @@ class VendorOverview(BaseModel):
     pe_ratio: float = Field(alias="PERatio")
     ebitda: int = Field(alias="EBITDA")
 
+    @field_validator('symbol', 'name', mode='before')
+    def clean_string_fields(cls, v):
+        if v is None or v in {"None", "", "N/A", "-"}:
+            return "Unknown"
+        return str(v).strip()
+
     @field_validator('market_cap', 'ebitda', mode='before')
-    def clean_int_fields(cls, v): return to_int(v)
+    def clean_int_fields(cls, v): 
+        return to_int(v)
 
     @field_validator('pe_ratio', mode='before')
-    def clean_float_fields(cls, v): return to_float(v)
+    def clean_float_fields(cls, v): 
+        return to_float(v)
 
 
 # --- Models for Income Statement (Deep Dive) ---
@@ -174,6 +186,28 @@ def read_root():
     """A simple health check endpoint to confirm the API is running."""
     return {"status": "API is running", "docs_url": "/docs"}
 
+@app.get("/test/{ticker}", tags=["Status"])
+def test_api_connection(ticker: str):
+    """Test endpoint to debug Alpha Vantage connection."""
+    try:
+        params = frozenset({"function": "OVERVIEW", "symbol": ticker.upper()}.items())
+        raw_data = fetch_alpha_vantage_data(params)
+        return {
+            "status": "success",
+            "ticker": ticker,
+            "data_keys": list(raw_data.keys()),
+            "symbol_field": raw_data.get("Symbol"),
+            "name_field": raw_data.get("Name"),
+            "sample_data": {k: v for k, v in list(raw_data.items())[:5]}
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "ticker": ticker,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
 # --- Main Dashboard Endpoint ---
 @app.get("/api/vendor/{ticker}/overview", response_model=VendorOverview, tags=["Vendors"])
 def get_vendor_overview(ticker: str):
@@ -181,12 +215,17 @@ def get_vendor_overview(ticker: str):
     try:
         params = frozenset({"function": "OVERVIEW", "symbol": ticker.upper()}.items())
         raw_data = fetch_alpha_vantage_data(params)
+        
+        # Add debug logging
+        logger.info(f"Raw data keys for {ticker}: {list(raw_data.keys())}")
+        
         return VendorOverview.model_validate(raw_data)
     except APIError as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except ValidationError as e:
         logger.error(f"Validation failed for {ticker} overview: {e}")
-        raise HTTPException(status_code=422, detail="Unexpected data format from external API.")
+        logger.error(f"Raw data was: {raw_data}")
+        raise HTTPException(status_code=422, detail=f"Unexpected data format from external API: {str(e)}")
     except Exception as e:
         logger.critical(f"Unexpected error for {ticker} overview: {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
@@ -265,3 +304,10 @@ def search_vendors(keywords: str):
     except Exception as e:
         logger.critical(f"Unexpected error during search for {keywords}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
+
+# ==============================================================================
+#  Server Startup
+# ==============================================================================
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
