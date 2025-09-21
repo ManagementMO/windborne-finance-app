@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { Cloud, Download } from 'lucide-react';
 import { CSVLink } from 'react-csv';
@@ -9,6 +9,7 @@ import { VendorSearch } from './components/dashboard/VendorSearch';
 import { VendorTable } from './components/dashboard/VendorTable';
 import { VendorChart } from './components/dashboard/VendorChart';
 import { VendorDeepDiveModal } from './components/dashboard/VendorDeepDiveModal';
+import { WeatherFinanceInsights } from './components/weather-finance/WeatherFinanceInsights';
 import { Button } from './components/ui/Button';
 import { ApiHealthCheck } from './components/ui/ApiHealthCheck';
 import { formatCurrency, formatNumber } from './lib/utils';
@@ -29,14 +30,16 @@ function App() {
     })),
   });
 
-  // Debug logging for vendor queries
+  // Debug logging for vendor queries (only in development)
   React.useEffect(() => {
-    console.log('Vendor queries status:', vendorQueries.map(q => ({
-      isLoading: q.isLoading,
-      isError: q.isError,
-      data: q.data,
-      error: q.error
-    })));
+    if (import.meta.env.DEV) {
+      console.log('Vendor queries status:', vendorQueries.map(q => ({
+        isLoading: q.isLoading,
+        isError: q.isError,
+        data: q.data ? { symbol: q.data.symbol, name: q.data.name } : null,
+        error: q.error?.message
+      })));
+    }
   }, [vendorQueries]);
 
   const vendors = vendorQueries
@@ -83,21 +86,26 @@ function App() {
     setIsModalOpen(false);
   };
 
-  const csvData = vendors.map(vendor => ({
-    Symbol: vendor.symbol,
-    Name: vendor.name,
-    'Market Cap': formatCurrency(vendor.market_cap),
-    'P/E Ratio': vendor.pe_ratio > 0 ? formatNumber(vendor.pe_ratio, 2) : 'N/A',
-    EBITDA: formatCurrency(vendor.ebitda),
-  }));
+  // Memoize CSV data generation for performance
+  const { csvData, csvHeaders } = useMemo(() => {
+    const data = vendors.map(vendor => ({
+      Symbol: vendor.symbol,
+      Name: vendor.name,
+      'Market Cap': formatCurrency(vendor.market_cap),
+      'P/E Ratio': vendor.pe_ratio > 0 ? formatNumber(vendor.pe_ratio, 2) : 'N/A',
+      EBITDA: formatCurrency(vendor.ebitda),
+    }));
 
-  const csvHeaders = [
-    { label: 'Symbol', key: 'Symbol' },
-    { label: 'Name', key: 'Name' },
-    { label: 'Market Cap', key: 'Market Cap' },
-    { label: 'P/E Ratio', key: 'P/E Ratio' },
-    { label: 'EBITDA', key: 'EBITDA' },
-  ];
+    const headers = [
+      { label: 'Symbol', key: 'Symbol' },
+      { label: 'Name', key: 'Name' },
+      { label: 'Market Cap', key: 'Market Cap' },
+      { label: 'P/E Ratio', key: 'P/E Ratio' },
+      { label: 'EBITDA', key: 'EBITDA' },
+    ];
+
+    return { csvData: data, csvHeaders: headers };
+  }, [vendors]);
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -186,6 +194,13 @@ function App() {
             <VendorChart
               vendors={vendors}
               isLoading={isLoading}
+            />
+          )}
+
+          {/* Weather-Finance Intelligence Section */}
+          {vendors.length > 0 && (
+            <WeatherFinanceInsights
+              activeVendors={activeTickers}
             />
           )}
 
