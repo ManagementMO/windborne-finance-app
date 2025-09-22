@@ -32,10 +32,8 @@ RUN pip install --upgrade pip \
 # Copy application code
 COPY . .
 
-# Create .env file with default values if it doesn't exist
-RUN if [ ! -f .env ]; then \
-        echo "ALPHA_VANTAGE_API_KEY=demo" > .env; \
-    fi
+# Note: .env file is optional for production deployment
+# Environment variables are typically set by the hosting platform (Render, etc.)
 
 # Change ownership to non-root user
 RUN chown -R appuser:appuser /app

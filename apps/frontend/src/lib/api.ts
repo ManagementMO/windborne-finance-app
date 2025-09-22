@@ -13,9 +13,16 @@ import {
 } from './mockData';
 // import { weatherImpactData } from './weatherFinanceData';
 
+// API base URL - uses environment variable for production deployment
+// Example: VITE_API_URL=https://windborne-api.onrender.com
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  baseURL: `${BASE_URL}/api`,
   timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // Add response interceptor for better error logging

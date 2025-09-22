@@ -23,14 +23,17 @@ from cachetools import cached, TTLCache
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# LOAD API KEY FROM .ENV FILE
+# LOAD API KEY FROM ENVIRONMENT VARIABLES (Render) OR .ENV FILE (Local)
 def load_environment():
-    """Load environment variables from .env file"""
-    load_dotenv(override=True)  # override=True ensures new values override existing ones
+    """Load environment variables from .env file or system environment"""
+    load_dotenv(override=False)  # Don't override system env vars (for Render)
     return os.getenv("ALPHA_VANTAGE_API_KEY")
+
 ALPHA_VANTAGE_API_KEY = load_environment()
-if not ALPHA_VANTAGE_API_KEY or ALPHA_VANTAGE_API_KEY == "demo":
-    raise RuntimeError("A valid ALPHA_VANTAGE_API_KEY must be set in the .env file.")
+if not ALPHA_VANTAGE_API_KEY:
+    raise RuntimeError("ALPHA_VANTAGE_API_KEY environment variable must be set.")
+if ALPHA_VANTAGE_API_KEY == "demo":
+    logger.warning("Using demo API key - functionality will be limited")
 
 ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 
@@ -326,7 +329,8 @@ origins = [
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
-    # Add your deployed frontend URL here later
+    "https://windborne-finance-app.vercel.app",
+    "https://windborne-finance-app-*.vercel.app",  # Vercel preview deployments
 ]
 
 app.add_middleware(
