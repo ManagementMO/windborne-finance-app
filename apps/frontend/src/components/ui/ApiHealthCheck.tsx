@@ -1,11 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Clock, Database } from 'lucide-react';
 import axios from 'axios';
-import { setMockMode } from '../../lib/api';
+import { setMockMode, BASE_URL } from '../../lib/api';
 import { useMockMode } from '../../hooks/useMockMode';
 
 const healthApi = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
+  baseURL: BASE_URL,
   timeout: 5000,
 });
 

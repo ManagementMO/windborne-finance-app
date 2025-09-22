@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { Cloud, Download, BarChart3, Grid } from 'lucide-react';
 import { CSVLink } from 'react-csv';
-import { vendorApi } from './lib/api';
+import { vendorApi, BASE_URL } from './lib/api';
 import { useMockMode } from './hooks/useMockMode';
 import { VendorOverview } from './types/vendor';
 import { VendorSearch } from './components/dashboard/VendorSearch';
@@ -178,7 +178,7 @@ function App() {
                 <div>
                   <h3 className="text-sm font-medium text-amber-800">API Connection Issue</h3>
                   <p className="text-sm text-amber-700 mt-1">
-                    Unable to connect to the WindBorne API at http://127.0.0.1:8000. Please ensure the backend server is running.
+                    Unable to connect to the WindBorne API at {BASE_URL}. Please ensure the backend server is running.
                   </p>
                 </div>
               </div>
