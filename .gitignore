@@ -8,3 +8,7 @@ node_modules/
 node_modules/*
 node_modules/**/*
 node_modules/**/**/*
+.claude
+apps/frontend/dist/
+apps/frontend/node_modules/
+apps/frontend/dist-ssr/

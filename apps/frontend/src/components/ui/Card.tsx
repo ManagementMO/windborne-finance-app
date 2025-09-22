@@ -9,7 +9,7 @@ export function Card({ children, className, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        'bg-white rounded-lg border border-slate-200 shadow-sm',
+        'bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden',
         className
       )}
       {...props}
@@ -26,7 +26,7 @@ interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 export function CardHeader({ children, className, ...props }: CardHeaderProps) {
   return (
     <div
-      className={cn('p-6 pb-4', className)}
+      className={cn('p-6 pb-4 overflow-hidden', className)}
       {...props}
     >
       {children}

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { Cloud, Download } from 'lucide-react';
+import { Cloud, Download, BarChart3, Grid } from 'lucide-react';
 import { CSVLink } from 'react-csv';
 import { vendorApi } from './lib/api';
 import { useMockMode } from './hooks/useMockMode';
@@ -10,6 +10,7 @@ import { VendorTable } from './components/dashboard/VendorTable';
 import { VendorChart } from './components/dashboard/VendorChart';
 import { VendorDeepDiveModal } from './components/dashboard/VendorDeepDiveModal';
 import { WeatherFinanceInsights } from './components/weather-finance/WeatherFinanceInsights';
+import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import { Button } from './components/ui/Button';
 import { ApiHealthCheck } from './components/ui/ApiHealthCheck';
 import { formatCurrency, formatNumber } from './lib/utils';
@@ -18,6 +19,7 @@ function App() {
   const [activeTickers, setActiveTickers] = useState<string[]>(['TEL', 'ST', 'DD', 'CE', 'LYB']);
   const [selectedVendor, setSelectedVendor] = useState<VendorOverview | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'classic' | 'analytics'>('classic');
   const isMockMode = useMockMode();
   
   const vendorQueries = useQueries({
@@ -107,6 +109,11 @@ function App() {
     return { csvData: data, csvHeaders: headers };
   }, [vendors]);
 
+  // If analytics mode is selected, render the new dashboard
+  if (viewMode === 'analytics') {
+    return <AnalyticsDashboard initialTickers={activeTickers} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-100">
       {/* Header */}
@@ -120,9 +127,30 @@ function App() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'classic' ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('classic')}
+                  className="h-8"
+                >
+                  <Grid className="h-4 w-4 mr-1" />
+                  Classic
+                </Button>
+                <Button
+                  variant={viewMode !== 'classic' ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('analytics')}
+                  className="h-8"
+                >
+                  <BarChart3 className="h-4 w-4 mr-1" />
+                  Analytics
+                </Button>
+              </div>
               <ApiHealthCheck />
-              <VendorSearch 
-                onAddVendor={addVendor} 
+              <VendorSearch
+                onAddVendor={addVendor}
                 activeTickers={activeTickers}
               />
             </div>
