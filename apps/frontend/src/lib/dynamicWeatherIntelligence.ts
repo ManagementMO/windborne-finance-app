@@ -356,7 +356,7 @@ export function calculateWeatherRisk(vendor: VendorOverview, sector: string, ind
   };
 }
 
-// Generate dynamic insights based on real vendor data and current conditions
+// Generate programmatic analysis based on real vendor data and current conditions
 export function generateDynamicInsights(vendors: VendorOverview[]) {
   const insights = [];
   const currentMonth = new Date().getMonth() + 1;

@@ -101,7 +101,7 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
           <div className="flex items-center space-x-3">
             <Wind className="h-6 w-6 text-blue-600" />
             <CardTitle className="text-blue-900">
-              WindBorne Weather-Finance Intelligence
+              WindBorne Weather-Finance Risk Assessment
             </CardTitle>
           </div>
         </CardHeader>
@@ -109,10 +109,10 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
           <div className="text-center py-8">
             <Wind className="h-12 w-12 text-blue-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-blue-900 mb-2">
-              Weather Intelligence Ready
+              Weather Risk Assessment Ready
             </h3>
             <p className="text-blue-700">
-              Add vendors to see comprehensive weather-finance analysis powered by WindBorne's balloon network.
+              Add vendors to see comprehensive weather-finance risk analysis powered by WindBorne's balloon network.
             </p>
           </div>
         </CardContent>
@@ -170,7 +170,7 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
           <div className="flex items-center space-x-2">
             <Wind className="h-6 w-6 text-blue-600" />
             <CardTitle className="text-blue-900">
-              WindBorne Weather-Finance Intelligence
+              WindBorne Weather-Finance Risk Assessment
             </CardTitle>
           </div>
           <Badge variant="info" className="bg-blue-100 text-blue-800">
@@ -195,9 +195,9 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
             onClick={() => setSelectedTab('insights')}
             role="tab"
             aria-selected={selectedTab === 'insights'}
-            aria-controls="ai-insights-panel"
+            aria-controls="analysis-panel"
           >
-            AI Insights
+            Analysis
           </Button>
           <Button
             variant={selectedTab === 'scenarios' ? 'primary' : 'outline'}
@@ -304,8 +304,8 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
         )}
 
         {selectedTab === 'insights' && (
-          <div className="space-y-4" role="tabpanel" id="ai-insights-panel" aria-labelledby="insights-tab">
-            <h3 className="text-lg font-semibold text-blue-900 mb-4">AI-Powered Financial Insights</h3>
+          <div className="space-y-4" role="tabpanel" id="analysis-panel" aria-labelledby="insights-tab">
+            <h3 className="text-lg font-semibold text-blue-900 mb-4">Programmatic Financial Analysis</h3>
             {weatherIntelligence.insights.map((insight, idx) => (
               <div key={idx} className="bg-white rounded-lg p-4 border border-blue-200">
                 <div className="flex items-start space-x-3">

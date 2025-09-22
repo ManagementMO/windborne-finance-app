@@ -235,7 +235,7 @@ export function AnalyticsDashboard({
                   title="Vendor Performance Analysis"
                 />
 
-                {/* Weather Finance Intelligence */}
+                {/* Weather Finance Risk Assessment */}
                 {filteredVendors.length > 0 && (
                   <WeatherFinanceInsights
                     activeVendors={filteredVendors.map(v => v.symbol)}

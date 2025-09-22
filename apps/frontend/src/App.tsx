@@ -7,7 +7,7 @@ import { useMockMode } from './hooks/useMockMode';
 import { VendorOverview } from './types/vendor';
 import { VendorSearch } from './components/dashboard/VendorSearch';
 import { VendorTable } from './components/dashboard/VendorTable';
-import { VendorChart } from './components/dashboard/VendorChart';
+import { InteractiveVendorChart } from './components/dashboard/InteractiveVendorChart';
 import { VendorDeepDiveModal } from './components/dashboard/VendorDeepDiveModal';
 import { WeatherFinanceInsights } from './components/weather-finance/WeatherFinanceInsights';
 import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
@@ -222,15 +222,15 @@ function App() {
             />
           </div>
 
-          {/* Chart Section */}
+          {/* Interactive Bar Chart Section */}
           {(vendors.length > 0 || isLoading) && (
-            <VendorChart
+            <InteractiveVendorChart
               vendors={vendors}
               isLoading={isLoading}
             />
           )}
 
-          {/* Weather-Finance Intelligence Section */}
+          {/* Weather-Finance Risk Assessment Section */}
           {vendors.length > 0 && (
             <WeatherFinanceInsights
               activeVendors={activeTickers}
