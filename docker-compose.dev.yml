@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # API Backend Service (Development)
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: windborne-api-dev
+    restart: unless-stopped
+    environment:
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-demo}
+      - PYTHONPATH=/app
+      - FASTAPI_ENV=development
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot reload
+      - ./apps/api:/app
+      - ./apps/api/.env:/app/.env:ro
+    networks:
+      - windborne-dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend Service (Development with hot reload)
+  frontend-dev:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: windborne-frontend-dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount source code for hot reload
+      - ./apps/frontend:/app
+      - /app/node_modules
+    networks:
+      - windborne-dev
+    depends_on:
+      - api
+
+  # Redis for development
+  redis:
+    image: redis:7-alpine
+    container_name: windborne-redis-dev
+    ports:
+      - "6379:6379"
+    networks:
+      - windborne-dev
+
+networks:
+  windborne-dev:
+    driver: bridge
+    name: windborne-dev
