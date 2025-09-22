@@ -6,7 +6,7 @@ import logging
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator, ValidationError
+from pydantic import BaseModel, Field, field_validator, ValidationError, ConfigDict
 from typing import Dict, List, Any
 from dotenv import load_dotenv
 from cachetools import cached, TTLCache
@@ -224,17 +224,27 @@ def test_api_connection(ticker: str):
         }
 
 # --- Main Dashboard Endpoint ---
-@app.get("/api/vendor/{ticker}/overview", response_model=VendorOverview, tags=["Vendors"])
+@app.get("/api/vendor/{ticker}/overview", tags=["Vendors"])
 def get_vendor_overview(ticker: str):
     """Fetches curated overview data for the main dashboard table."""
     try:
         params = frozenset({"function": "OVERVIEW", "symbol": ticker.upper()}.items())
         raw_data = fetch_alpha_vantage_data(params)
-        
+
         # Add debug logging
         logger.info(f"Raw data keys for {ticker}: {list(raw_data.keys())}")
-        
-        return VendorOverview.model_validate(raw_data)
+
+        # Validate and convert to our format
+        validated_data = VendorOverview.model_validate(raw_data)
+
+        # Return with snake_case field names (matching frontend expectations)
+        return {
+            "symbol": validated_data.symbol,
+            "name": validated_data.name,
+            "market_cap": validated_data.market_cap,
+            "pe_ratio": validated_data.pe_ratio,
+            "ebitda": validated_data.ebitda
+        }
     except APIError as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except ValidationError as e:
@@ -246,20 +256,28 @@ def get_vendor_overview(ticker: str):
         raise HTTPException(status_code=500, detail="Internal server error.")
 
 # --- Deep Dive Modal Endpoints ---
-@app.get("/api/vendor/{ticker}/income-statement", response_model=VendorIncomeStatement, tags=["Vendors"])
+@app.get("/api/vendor/{ticker}/income-statement", tags=["Vendors"])
 def get_income_statement(ticker: str):
     """Fetches annual income statement data for the deep-dive modal."""
     try:
         params = frozenset({"function": "INCOME_STATEMENT", "symbol": ticker.upper()}.items())
         raw_data = fetch_alpha_vantage_data(params)
-        
+
         # Manually construct the response while validating the nested list
         validated_reports = [IncomeReport.model_validate(report) for report in raw_data.get("annualReports", [])]
-        
-        return VendorIncomeStatement(
-            symbol=raw_data.get("symbol", ticker.upper()),
-            annual_reports=validated_reports
-        )
+
+        # Return with snake_case field names
+        return {
+            "symbol": raw_data.get("symbol", ticker.upper()),
+            "annual_reports": [
+                {
+                    "fiscal_date_ending": report.fiscal_date_ending,
+                    "total_revenue": report.total_revenue,
+                    "net_income": report.net_income
+                }
+                for report in validated_reports
+            ]
+        }
     except APIError as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except ValidationError as e:
@@ -269,24 +287,31 @@ def get_income_statement(ticker: str):
         logger.critical(f"Unexpected error for {ticker} income statement: {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
 
-@app.get("/api/vendor/{ticker}/daily-series", response_model=VendorDailySeries, tags=["Vendors"])
+@app.get("/api/vendor/{ticker}/daily-series", tags=["Vendors"])
 def get_daily_series(ticker: str):
     """Fetches the last 100 days of stock data for the deep-dive chart."""
     try:
         params = frozenset({"function": "TIME_SERIES_DAILY", "symbol": ticker.upper(), "outputsize": "compact"}.items())
         raw_data = fetch_alpha_vantage_data(params)
-        
+
         time_series_raw = raw_data.get("Time Series (Daily)", {})
         # Transform the data from a dict of dates to a list of objects, with validation
         time_series_list = [
             TimeSeriesData.model_validate({"date": date, "close": details["4. close"]})
             for date, details in time_series_raw.items()
         ]
-        
-        return VendorDailySeries(
-            symbol=raw_data.get("Meta Data", {}).get("2. Symbol", ticker.upper()),
-            time_series=time_series_list
-        )
+
+        # Return with snake_case field names
+        return {
+            "symbol": raw_data.get("Meta Data", {}).get("2. Symbol", ticker.upper()),
+            "time_series": [
+                {
+                    "date": item.date,
+                    "close": item.close
+                }
+                for item in time_series_list
+            ]
+        }
     except (APIError, ValidationError) as e:
         status = e.status_code if isinstance(e, APIError) else 422
         detail = e.message if isinstance(e, APIError) else "Unexpected data format for daily series."
@@ -298,19 +323,36 @@ def get_daily_series(ticker: str):
 
 
 # --- Dynamic Search Endpoint ---
-@app.get("/api/search/{keywords}", response_model=VendorSearchResponse, tags=["Search"])
+@app.get("/api/search/{keywords}", tags=["Search"])
 def search_vendors(keywords: str):
     """Searches for stock symbols and names matching the given keywords."""
     try:
         params = frozenset({"function": "SYMBOL_SEARCH", "keywords": keywords}.items())
         raw_data = fetch_alpha_vantage_data(params)
-        
+
         # Filter for US markets and validate each result
         us_results = [
-            SearchResult.model_validate(item) for item in raw_data.get("bestMatches", []) 
+            SearchResult.model_validate(item) for item in raw_data.get("bestMatches", [])
             if item.get("4. region") == "United States"
         ]
-        return VendorSearchResponse(results=us_results)
+
+        # Return with snake_case field names
+        return {
+            "results": [
+                {
+                    "symbol": result.symbol,
+                    "name": result.name,
+                    "type": result.type,
+                    "region": result.region,
+                    "market_open": result.market_open,
+                    "market_close": result.market_close,
+                    "timezone": result.timezone,
+                    "currency": result.currency,
+                    "match_score": result.match_score
+                }
+                for result in us_results
+            ]
+        }
     except (APIError, ValidationError) as e:
         status = e.status_code if isinstance(e, APIError) else 422
         detail = e.message if isinstance(e, APIError) else "Unexpected data format for search results."
