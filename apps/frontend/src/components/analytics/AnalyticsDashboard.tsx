@@ -19,12 +19,12 @@ interface AnalyticsDashboardProps {
 }
 
 export function AnalyticsDashboard({
-  initialTickers = ['TEL', 'ST', 'DD', 'CE', 'LYB', 'AAPL', 'MSFT', 'GOOGL'],
+  initialTickers = ['TEL', 'ST', 'DD', 'CE', 'LYB'],
   onBackToClassic
 }: AnalyticsDashboardProps) {
   const [activeTickers] = useState<string[]>(initialTickers);
   const [filters, setFilters] = useState<FilterState>(defaultFilterState);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<VendorOverview | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -182,7 +182,7 @@ export function AnalyticsDashboard({
         onBackToClassic={onBackToClassic}
         showFilters={showFilters}
       >
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Main Content Grid */}
           <div className="grid grid-cols-12 gap-6">
             {/* Filters Sidebar */}
@@ -247,15 +247,15 @@ export function AnalyticsDashboard({
                   <div className="min-w-0">
                     <MultiMetricChart
                       data={filteredVendors}
-                      title="Risk vs Performance"
-                      defaultChartType="scatter"
+                      title="Financial Performance Overview"
+                      defaultChartType="composed"
                     />
                   </div>
                   <div className="min-w-0">
                     <MultiMetricChart
                       data={filteredVendors}
-                      title="Company Comparison Radar"
-                      defaultChartType="radar"
+                      title="Valuation Analysis"
+                      defaultChartType="bar"
                     />
                   </div>
                 </div>
