@@ -111,7 +111,12 @@ function App() {
 
   // If analytics mode is selected, render the new dashboard
   if (viewMode === 'analytics') {
-    return <AnalyticsDashboard initialTickers={activeTickers} />;
+    return (
+      <AnalyticsDashboard
+        initialTickers={activeTickers}
+        onBackToClassic={() => setViewMode('classic')}
+      />
+    );
   }
 
   return (

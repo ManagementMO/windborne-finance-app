@@ -1,11 +1,19 @@
 import { useState, useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { TrendingUp, AlertTriangle, Target, Zap, Wind } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { weatherImpactData, weatherFinanceInsights, climateScenarios } from '../../lib/weatherFinanceData';
+import { vendorApi } from '../../lib/api';
+import { useMockMode } from '../../hooks/useMockMode';
+import { VendorOverview } from '../../types/vendor';
+import {
+  generateWeatherEvents,
+  calculateWeatherRisk,
+  generateDynamicInsights,
+  generateClimateScenarios
+} from '../../lib/dynamicWeatherIntelligence';
 import { formatCurrency, formatNumber } from '../../lib/utils';
-// import { WeatherImpactData, WeatherFinanceInsight } from '../../types/weather-finance';
 
 interface WeatherFinanceInsightsProps {
   activeVendors: string[];
@@ -13,15 +21,80 @@ interface WeatherFinanceInsightsProps {
 
 export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsightsProps) {
   const [selectedTab, setSelectedTab] = useState<'impact' | 'insights' | 'scenarios'>('impact');
+  const isMockMode = useMockMode();
 
-  // Filter data for active vendors (memoized for performance)
-  const relevantWeatherData = useMemo(() => 
-    weatherImpactData.filter(data => activeVendors.includes(data.symbol)),
-    [activeVendors]
-  );
+  // Fetch real vendor data for weather analysis
+  const vendorQueries = useQueries({
+    queries: activeVendors.map(ticker => ({
+      queryKey: ['vendorOverview', ticker, isMockMode ? 'mock' : 'live'],
+      queryFn: () => vendorApi.getOverview(ticker),
+      staleTime: isMockMode ? Infinity : 5 * 60 * 1000,
+      retry: isMockMode ? 0 : 1,
+      throwOnError: false,
+    })),
+  });
+
+  // Process vendor data and generate dynamic weather intelligence
+  const { vendors, weatherIntelligence } = useMemo(() => {
+    const validVendors = vendorQueries
+      .map(query => query.data)
+      .filter((vendor): vendor is VendorOverview => {
+        return vendor !== undefined &&
+          typeof vendor.symbol === 'string' &&
+          vendor.symbol.length > 0 &&
+          typeof vendor.name === 'string' &&
+          vendor.name.length > 0;
+      });
+
+    // Map real companies to their sectors (from our SQLite data)
+    const sectorMapping: Record<string, { sector: string; industry: string }> = {
+      'TEL': { sector: 'TECHNOLOGY', industry: 'ELECTRONIC COMPONENTS' },
+      'ST': { sector: 'TECHNOLOGY', industry: 'SCIENTIFIC & TECHNICAL INSTRUMENTS' },
+      'DD': { sector: 'BASIC MATERIALS', industry: 'SPECIALTY CHEMICALS' },
+      'CE': { sector: 'BASIC MATERIALS', industry: 'SPECIALTY CHEMICALS' },
+      'LYB': { sector: 'BASIC MATERIALS', industry: 'SPECIALTY CHEMICALS' }
+    };
+
+    // Generate dynamic weather data for each vendor
+    const weatherData = validVendors.map(vendor => {
+      const sectorInfo = sectorMapping[vendor.symbol] || { sector: 'UNKNOWN', industry: 'UNKNOWN' };
+      const weatherRisk = calculateWeatherRisk(vendor, sectorInfo.sector, sectorInfo.industry);
+      const weatherEvents = generateWeatherEvents(vendor.symbol, sectorInfo.sector, sectorInfo.industry);
+
+      return {
+        symbol: vendor.symbol,
+        company_name: vendor.name,
+        sector: sectorInfo.sector.toLowerCase().replace(' ', '_'),
+        weather_sensitivity: weatherRisk.sensitivity,
+        revenue_correlation: weatherRisk.correlation,
+        balloon_coverage_score: weatherRisk.coverage,
+        recent_weather_events: weatherEvents,
+        risk_metrics: {
+          next_30_days_risk: weatherRisk.riskLevel,
+          climate_trend_exposure: weatherRisk.climateExposure || 75,
+          supply_chain_vulnerability: weatherRisk.supplyChainVulnerability || 70,
+          seasonal_revenue_variance: weatherRisk.seasonalVariance || 15
+        }
+      };
+    });
+
+    const insights = generateDynamicInsights(validVendors);
+    const scenarios = generateClimateScenarios(validVendors);
+
+    return {
+      vendors: validVendors,
+      weatherIntelligence: {
+        weatherData,
+        insights,
+        scenarios
+      }
+    };
+  }, [vendorQueries]);
+
+  const isLoading = vendorQueries.some(query => query.isLoading);
 
   // Early return if no relevant data
-  if (relevantWeatherData.length === 0) {
+  if (vendors.length === 0 && !isLoading) {
     return (
       <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
         <CardHeader>
@@ -76,19 +149,19 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
 
   // Memoize expensive calculations
   const { totalWeatherImpact, averageBalloonCoverage } = useMemo(() => {
-    const totalImpact = relevantWeatherData.reduce((sum, data) => {
+    const totalImpact = weatherIntelligence.weatherData.reduce((sum, data) => {
       return sum + data.recent_weather_events.reduce((eventSum, event) => eventSum + event.estimated_impact, 0);
     }, 0);
 
-    const avgCoverage = relevantWeatherData.length > 0 
-      ? relevantWeatherData.reduce((sum, data) => sum + data.balloon_coverage_score, 0) / relevantWeatherData.length 
+    const avgCoverage = weatherIntelligence.weatherData.length > 0
+      ? weatherIntelligence.weatherData.reduce((sum, data) => sum + data.balloon_coverage_score, 0) / weatherIntelligence.weatherData.length
       : 0;
 
     return {
       totalWeatherImpact: totalImpact,
       averageBalloonCoverage: avgCoverage
     };
-  }, [relevantWeatherData]);
+  }, [weatherIntelligence.weatherData]);
 
   return (
     <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
@@ -157,7 +230,7 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
           <div className="bg-white rounded-lg p-4 border border-blue-200">
             <p className="text-xs text-blue-600 uppercase tracking-wider font-medium">High-Risk Companies</p>
             <p className="text-lg font-bold text-amber-600">
-              {relevantWeatherData.filter(d => d.risk_metrics.next_30_days_risk === 'high').length}
+              {weatherIntelligence.weatherData.filter(d => d.risk_metrics.next_30_days_risk === 'high').length}
             </p>
           </div>
         </div>
@@ -166,7 +239,7 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
         {selectedTab === 'impact' && (
           <div className="space-y-4" role="tabpanel" id="weather-impact-panel" aria-labelledby="impact-tab">
             <h3 className="text-lg font-semibold text-blue-900 mb-4">Weather Impact Analysis</h3>
-            {relevantWeatherData.map((data) => (
+            {weatherIntelligence.weatherData.map((data) => (
               <div key={data.symbol} className="bg-white rounded-lg p-4 border border-blue-200">
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -233,7 +306,7 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
         {selectedTab === 'insights' && (
           <div className="space-y-4" role="tabpanel" id="ai-insights-panel" aria-labelledby="insights-tab">
             <h3 className="text-lg font-semibold text-blue-900 mb-4">AI-Powered Financial Insights</h3>
-            {weatherFinanceInsights.map((insight, idx) => (
+            {weatherIntelligence.insights.map((insight, idx) => (
               <div key={idx} className="bg-white rounded-lg p-4 border border-blue-200">
                 <div className="flex items-start space-x-3">
                   <div className="mt-1">{getInsightIcon(insight.insight_type)}</div>
@@ -264,7 +337,7 @@ export function WeatherFinanceInsights({ activeVendors }: WeatherFinanceInsights
         {selectedTab === 'scenarios' && (
           <div className="space-y-4" role="tabpanel" id="climate-scenarios-panel" aria-labelledby="scenarios-tab">
             <h3 className="text-lg font-semibold text-blue-900 mb-4">Climate Risk Scenarios</h3>
-            {climateScenarios.map((scenario, idx) => (
+            {weatherIntelligence.scenarios.map((scenario, idx) => (
               <div key={idx} className="bg-white rounded-lg p-4 border border-blue-200">
                 <div className="flex justify-between items-start mb-3">
                   <div>

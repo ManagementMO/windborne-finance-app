@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Grid, BarChart3, Settings, Filter, Download, RefreshCw } from 'lucide-react';
+import { Grid, BarChart3, Settings, Filter, Download, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface DashboardLayoutProps {
@@ -7,6 +7,7 @@ interface DashboardLayoutProps {
   onExportData?: () => void;
   onRefreshData?: () => void;
   onToggleFilters?: () => void;
+  onBackToClassic?: () => void;
   showFilters?: boolean;
 }
 
@@ -15,6 +16,7 @@ export function DashboardLayout({
   onExportData,
   onRefreshData,
   onToggleFilters,
+  onBackToClassic,
   showFilters = false
 }: DashboardLayoutProps) {
   const [isConfigMode, setIsConfigMode] = useState(false);
@@ -29,6 +31,17 @@ export function DashboardLayout({
       <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
+            {onBackToClassic && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onBackToClassic}
+                className="mr-2"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Classic
+              </Button>
+            )}
             <BarChart3 className="h-5 w-5 text-blue-600" />
             <span className="font-semibold text-slate-800">Analytics Dashboard</span>
           </div>

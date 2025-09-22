@@ -15,10 +15,12 @@ import { formatCurrency, formatNumber } from '../../lib/utils';
 
 interface AnalyticsDashboardProps {
   initialTickers?: string[];
+  onBackToClassic?: () => void;
 }
 
 export function AnalyticsDashboard({
-  initialTickers = ['TEL', 'ST', 'DD', 'CE', 'LYB', 'AAPL', 'MSFT', 'GOOGL']
+  initialTickers = ['TEL', 'ST', 'DD', 'CE', 'LYB', 'AAPL', 'MSFT', 'GOOGL'],
+  onBackToClassic
 }: AnalyticsDashboardProps) {
   const [activeTickers] = useState<string[]>(initialTickers);
   const [filters, setFilters] = useState<FilterState>(defaultFilterState);
@@ -177,6 +179,7 @@ export function AnalyticsDashboard({
         onExportData={handleExportData}
         onRefreshData={handleRefreshData}
         onToggleFilters={handleToggleFilters}
+        onBackToClassic={onBackToClassic}
         showFilters={showFilters}
       >
         <div className="space-y-6">
