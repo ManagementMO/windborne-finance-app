@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
@@ -62,6 +62,20 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
   const [showFilters, setShowFilters] = useState(true);
   const [minValue, setMinValue] = useState<number>(0);
   const [maxValue, setMaxValue] = useState<number>(0);
+  const [selectedVendors, setSelectedVendors] = useState<string[]>(
+    vendors.map(v => v.symbol) // Initially select all vendors
+  );
+
+  // Update selected vendors when vendors prop changes
+  useEffect(() => {
+    const newVendorSymbols = vendors.map(v => v.symbol);
+    setSelectedVendors(prev => {
+      // Keep only selected vendors that still exist, and add new ones
+      const existing = prev.filter(symbol => newVendorSymbols.includes(symbol));
+      const newOnes = newVendorSymbols.filter(symbol => !prev.includes(symbol));
+      return [...existing, ...newOnes];
+    });
+  }, [vendors]);
 
   // Filter metrics based on selected group
   const availableMetrics = useMemo(() => {
@@ -91,6 +105,9 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
   // Process, filter, and sort chart data
   const chartData = useMemo(() => {
     let filteredVendors = vendors.filter(vendor => {
+      // First filter by selected vendors
+      if (!selectedVendors.includes(vendor.symbol)) return false;
+
       const value = vendor[selectedMetric];
       if (value <= 0) return false;
       if (minValue > 0 && value < minValue) return false;
@@ -117,7 +134,7 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
       const bVal = b.value || 0;
       return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
     });
-  }, [vendors, selectedMetric, sortOrder, minValue, maxValue]);
+  }, [vendors, selectedMetric, sortOrder, minValue, maxValue, selectedVendors]);
 
   // Get colors for bars
   const getBarColor = (index: number) => {
@@ -281,7 +298,7 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
             <BarChart3 className="h-5 w-5 text-blue-600" />
             Interactive Vendor Comparison
             <Badge variant="info" className="ml-2">
-              {chartData.length} Companies
+              {chartData.length} of {selectedVendors.length} Selected
             </Badge>
           </CardTitle>
           <div className="flex items-center gap-2">
@@ -396,6 +413,63 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
               </div>
             </div>
 
+            {/* Company Selection */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-slate-700">Company Selection</label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedVendors(vendors.map(v => v.symbol))}
+                    className="text-xs"
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedVendors([])}
+                    className="text-xs"
+                  >
+                    Deselect All
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                {vendors.map(vendor => (
+                  <label
+                    key={vendor.symbol}
+                    className="flex items-center gap-2 p-2 rounded border hover:bg-slate-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedVendors.includes(vendor.symbol)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedVendors(prev => [...prev, vendor.symbol]);
+                        } else {
+                          setSelectedVendors(prev => prev.filter(s => s !== vendor.symbol));
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-slate-800 truncate">
+                        {vendor.symbol}
+                      </div>
+                      <div className="text-xs text-slate-500 truncate">
+                        {vendor.name.length > 20 ? vendor.name.substring(0, 20) + '...' : vendor.name}
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                {selectedVendors.length} of {vendors.length} companies selected
+              </div>
+            </div>
+
             {/* Quick Reset */}
             <div className="flex justify-between items-center">
               <div className="text-xs text-slate-500">
@@ -409,6 +483,7 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
                   setMaxValue(0);
                   setSortOrder('desc');
                   setSelectedGroup('all');
+                  setSelectedVendors(vendors.map(v => v.symbol));
                 }}
               >
                 Reset Filters
@@ -548,11 +623,13 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
                   onClick={() => {
                     setMinValue(0);
                     setMaxValue(0);
+                    setSelectedVendors(vendors.map(v => v.symbol));
+                    setSelectedGroup('all');
                   }}
                   variant="outline"
                   size="sm"
                 >
-                  Reset Value Filters
+                  Reset All Filters
                 </Button>
               </div>
             </div>
