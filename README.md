@@ -6,6 +6,8 @@ A financial vendor assessment platform built for WindBorne Systems to evaluate p
 
 This application combines live financial data from Alpha Vantage with custom algorithms to help sales teams identify and prioritize vendor opportunities. The dashboard provides both traditional financial metrics and WindBorne-specific assessments based on weather sensitivity and contract readiness.
 
+![Alt text](https://raw.githubusercontent.com/ManagementMO/windborne-finance-app/main/platform.png)
+
 ## Features
 
 ### Core Dashboard
