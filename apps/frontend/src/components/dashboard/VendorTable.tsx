@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { VendorOverview } from '../../types/vendor';
 import { Badge } from '../ui/Badge';
 import { TableRowSkeleton } from '../ui/Skeleton';
-import { formatCurrency, formatNumber, getContractReadiness, getWeatherExposure, getSalesOpportunity } from '../../lib/utils';
+import { formatCurrency, formatNumber, getContractReadiness, getWeatherExposure, getSalesOpportunity, getFinancialAlerts } from '../../lib/utils';
 
 interface VendorTableProps {
   vendors: VendorOverview[];
@@ -86,6 +86,9 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                   Sales Priority
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Alerts
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Action
                 </th>
               </tr>
@@ -95,6 +98,7 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                 const contractReadiness = getContractReadiness(vendor);
                 const weatherExposure = getWeatherExposure(vendor);
                 const salesOpportunity = getSalesOpportunity(vendor);
+                const alerts = getFinancialAlerts(vendor);
                 return (
                   <tr
                     key={vendor.symbol}
@@ -145,6 +149,22 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      {alerts.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={alerts[0].type === 'critical' ? 'error' : alerts[0].type === 'warning' ? 'warning' : 'info'} className="text-xs">
+                            {alerts.length} Alert{alerts.length > 1 ? 's' : ''}
+                          </Badge>
+                          <span className="text-xs text-slate-500">
+                            {alerts[0].title}
+                          </span>
+                        </div>
+                      ) : (
+                        <Badge variant="success" className="text-xs">
+                          All Clear
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -170,6 +190,7 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
           const contractReadiness = getContractReadiness(vendor);
           const weatherExposure = getWeatherExposure(vendor);
           const salesOpportunity = getSalesOpportunity(vendor);
+          const alerts = getFinancialAlerts(vendor);
           return (
             <div
               key={vendor.symbol}
@@ -239,6 +260,19 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                   </div>
                 </div>
               </div>
+
+              {/* Financial Alerts for Mobile */}
+              {alerts.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Financial Alerts</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={alerts[0].type === 'critical' ? 'error' : alerts[0].type === 'warning' ? 'warning' : 'info'} className="text-xs">
+                      {alerts.length} Alert{alerts.length > 1 ? 's' : ''}
+                    </Badge>
+                    <span className="text-xs text-slate-600">{alerts[0].title}</span>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

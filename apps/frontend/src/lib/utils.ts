@@ -390,6 +390,265 @@ function extractContractScore(grade: string): number {
   }
 }
 
+// Financial Health Alerts & Monitoring
+export interface FinancialAlert {
+  id: string;
+  type: 'critical' | 'warning' | 'opportunity' | 'info';
+  category: 'debt' | 'valuation' | 'growth' | 'volatility' | 'profitability';
+  title: string;
+  message: string;
+  severity: number; // 1-10 scale
+  actionable: boolean;
+  timeframe: 'immediate' | 'short-term' | 'medium-term' | 'long-term';
+}
+
+export function getFinancialAlerts(vendor: VendorOverview): FinancialAlert[] {
+  const alerts: FinancialAlert[] = [];
+
+  // Critical Debt/Loss Concerns
+  if (vendor.ebitda < 0) {
+    alerts.push({
+      id: `${vendor.symbol}-negative-ebitda`,
+      type: 'critical',
+      category: 'profitability',
+      title: 'Negative EBITDA',
+      message: `${vendor.symbol} shows negative earnings (${formatCurrency(vendor.ebitda)}). High financial risk.`,
+      severity: 9,
+      actionable: true,
+      timeframe: 'immediate'
+    });
+  }
+
+  // Extreme Valuation Warnings
+  if (vendor.pe_ratio > 50 && vendor.pe_ratio > 0) {
+    alerts.push({
+      id: `${vendor.symbol}-extreme-pe`,
+      type: 'warning',
+      category: 'valuation',
+      title: 'Extreme P/E Ratio',
+      message: `${vendor.symbol} trading at ${formatNumber(vendor.pe_ratio, 1)}x P/E - significantly overvalued. Market expects exceptional growth.`,
+      severity: 7,
+      actionable: true,
+      timeframe: 'short-term'
+    });
+  }
+
+  // Growth Opportunities (Value Stocks)
+  if (vendor.pe_ratio > 0 && vendor.pe_ratio < 15 && vendor.ebitda > 1000000000) {
+    alerts.push({
+      id: `${vendor.symbol}-value-opportunity`,
+      type: 'opportunity',
+      category: 'valuation',
+      title: 'Value Investment Opportunity',
+      message: `${vendor.symbol} trading at attractive ${formatNumber(vendor.pe_ratio, 1)}x P/E with strong EBITDA. Potential undervaluation.`,
+      severity: 5,
+      actionable: true,
+      timeframe: 'medium-term'
+    });
+  }
+
+  // Small Cap Risk Warning
+  if (vendor.market_cap < 5000000000) {
+    alerts.push({
+      id: `${vendor.symbol}-small-cap-risk`,
+      type: 'warning',
+      category: 'volatility',
+      title: 'Small Cap Volatility Risk',
+      message: `${vendor.symbol} is a small-cap company (${formatCurrency(vendor.market_cap)}). Higher volatility and liquidity risk.`,
+      severity: 6,
+      actionable: false,
+      timeframe: 'long-term'
+    });
+  }
+
+  // Large Cap Stability
+  if (vendor.market_cap > 50000000000 && vendor.ebitda > 5000000000) {
+    alerts.push({
+      id: `${vendor.symbol}-large-cap-stable`,
+      type: 'info',
+      category: 'growth',
+      title: 'Large Cap Stability',
+      message: `${vendor.symbol} is a large, established company with stable earnings. Lower risk, slower growth profile.`,
+      severity: 3,
+      actionable: false,
+      timeframe: 'long-term'
+    });
+  }
+
+  // Profitability Efficiency Alert
+  if (vendor.ebitda > 0 && vendor.market_cap > 0) {
+    const ebitdaYield = vendor.ebitda / vendor.market_cap;
+    if (ebitdaYield > 0.12) {
+      alerts.push({
+        id: `${vendor.symbol}-high-efficiency`,
+        type: 'opportunity',
+        category: 'profitability',
+        title: 'High Profitability Efficiency',
+        message: `${vendor.symbol} generates ${formatNumber(ebitdaYield * 100, 1)}% EBITDA yield. Exceptional operational efficiency.`,
+        severity: 4,
+        actionable: true,
+        timeframe: 'short-term'
+      });
+    }
+  }
+
+  // No P/E Data Alert
+  if (vendor.pe_ratio === 0) {
+    alerts.push({
+      id: `${vendor.symbol}-no-pe-data`,
+      type: 'warning',
+      category: 'valuation',
+      title: 'No Earnings Data Available',
+      message: `${vendor.symbol} has no P/E ratio data. Company may have losses or incomplete financial reporting.`,
+      severity: 6,
+      actionable: true,
+      timeframe: 'immediate'
+    });
+  }
+
+  return alerts.sort((a, b) => b.severity - a.severity); // Sort by severity (highest first)
+}
+
+// Industry Benchmarking Data
+export interface IndustryBenchmark {
+  industry: string;
+  sector: string;
+  avgPeRatio: number;
+  avgMarketCap: number; // in billions
+  avgEbitdaMargin: number; // as percentage
+  companies: number;
+  volatilityIndex: number; // 1-10 scale
+}
+
+export const industryBenchmarks: Record<string, IndustryBenchmark> = {
+  'technology': {
+    industry: 'Technology Hardware',
+    sector: 'Technology',
+    avgPeRatio: 28.5,
+    avgMarketCap: 45.2,
+    avgEbitdaMargin: 18.5,
+    companies: 156,
+    volatilityIndex: 7
+  },
+  'semiconductors': {
+    industry: 'Semiconductors',
+    sector: 'Technology',
+    avgPeRatio: 32.1,
+    avgMarketCap: 52.8,
+    avgEbitdaMargin: 22.3,
+    companies: 89,
+    volatilityIndex: 8
+  },
+  'chemicals': {
+    industry: 'Specialty Chemicals',
+    sector: 'Materials',
+    avgPeRatio: 18.7,
+    avgMarketCap: 28.4,
+    avgEbitdaMargin: 16.8,
+    companies: 124,
+    volatilityIndex: 6
+  },
+  'diversified_chemicals': {
+    industry: 'Diversified Chemicals',
+    sector: 'Materials',
+    avgPeRatio: 15.3,
+    avgMarketCap: 35.6,
+    avgEbitdaMargin: 14.2,
+    companies: 67,
+    volatilityIndex: 5
+  }
+};
+
+export function getIndustryClassification(vendor: VendorOverview): string {
+  const symbol = vendor.symbol.toUpperCase();
+  const name = vendor.name.toLowerCase();
+
+  // Technology/Semiconductor companies
+  if (symbol === 'TEL' || symbol === 'ST' ||
+      name.includes('technology') || name.includes('semiconductor') ||
+      name.includes('connectivity') || name.includes('sensata')) {
+    return symbol === 'ST' ? 'semiconductors' : 'technology';
+  }
+
+  // Chemical companies
+  if (symbol === 'DD' || symbol === 'CE' || symbol === 'LYB' ||
+      name.includes('chemical') || name.includes('dupont') ||
+      name.includes('celanese') || name.includes('lyondell')) {
+    return symbol === 'DD' ? 'diversified_chemicals' : 'chemicals';
+  }
+
+  return 'technology'; // Default fallback
+}
+
+export interface PeerComparison {
+  vendor: VendorOverview;
+  industry: IndustryBenchmark;
+  pePercentile: number; // 0-100, where 100 = highest PE in industry
+  marketCapPercentile: number;
+  ebitdaMarginPercentile: number;
+  overallRanking: 'top-quartile' | 'above-average' | 'below-average' | 'bottom-quartile';
+  insights: string[];
+}
+
+export function getPeerComparison(vendor: VendorOverview): PeerComparison {
+  const industryKey = getIndustryClassification(vendor);
+  const industry = industryBenchmarks[industryKey];
+
+  const marketCapB = vendor.market_cap / 1000000000;
+  const ebitdaMargin = vendor.ebitda > 0 && vendor.market_cap > 0
+    ? (vendor.ebitda / vendor.market_cap) * 100
+    : 0;
+
+  // Calculate percentiles (simplified - in real app would use historical data)
+  const pePercentile = vendor.pe_ratio > 0
+    ? Math.min(100, Math.max(0, (vendor.pe_ratio / industry.avgPeRatio) * 50))
+    : 0;
+
+  const marketCapPercentile = Math.min(100, Math.max(0, (marketCapB / industry.avgMarketCap) * 50));
+
+  const ebitdaMarginPercentile = ebitdaMargin > 0
+    ? Math.min(100, Math.max(0, (ebitdaMargin / industry.avgEbitdaMargin) * 50))
+    : 0;
+
+  // Overall ranking based on composite score
+  const compositeScore = (pePercentile + marketCapPercentile + ebitdaMarginPercentile) / 3;
+  let overallRanking: PeerComparison['overallRanking'];
+
+  if (compositeScore >= 75) overallRanking = 'top-quartile';
+  else if (compositeScore >= 50) overallRanking = 'above-average';
+  else if (compositeScore >= 25) overallRanking = 'below-average';
+  else overallRanking = 'bottom-quartile';
+
+  // Generate insights
+  const insights: string[] = [];
+
+  if (vendor.pe_ratio > industry.avgPeRatio * 1.5) {
+    insights.push(`Trading at ${formatNumber(vendor.pe_ratio / industry.avgPeRatio, 1)}x industry average P/E - premium valuation`);
+  } else if (vendor.pe_ratio > 0 && vendor.pe_ratio < industry.avgPeRatio * 0.8) {
+    insights.push(`Trading below industry average P/E - potential value opportunity`);
+  }
+
+  if (marketCapB > industry.avgMarketCap * 1.5) {
+    insights.push(`Market cap ${formatNumber(marketCapB / industry.avgMarketCap, 1)}x larger than industry average - market leader`);
+  }
+
+  if (ebitdaMargin > industry.avgEbitdaMargin * 1.2) {
+    insights.push(`EBITDA margin above industry average - operational excellence`);
+  } else if (ebitdaMargin < industry.avgEbitdaMargin * 0.8 && ebitdaMargin > 0) {
+    insights.push(`EBITDA margin below industry peers - efficiency opportunity`);
+  }
+
+  return {
+    vendor,
+    industry,
+    pePercentile,
+    marketCapPercentile,
+    ebitdaMarginPercentile,
+    overallRanking,
+    insights
+  };
+}
+
 export function formatChartMetricValue(value: number, metric: string): string {
   switch (metric) {
     case 'market_cap':

@@ -13,7 +13,7 @@ import { WeatherFinanceInsights } from './components/weather-finance/WeatherFina
 import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import { Button } from './components/ui/Button';
 import { ApiHealthCheck } from './components/ui/ApiHealthCheck';
-import { formatCurrency, formatNumber } from './lib/utils';
+import { formatCurrency, formatNumber, getContractReadiness, getWeatherExposure, getSalesOpportunity, getFinancialAlerts, getPeerComparison } from './lib/utils';
 
 function App() {
   const [activeTickers, setActiveTickers] = useState<string[]>(['TEL', 'ST', 'DD', 'CE', 'LYB']);
@@ -88,22 +88,64 @@ function App() {
     setIsModalOpen(false);
   };
 
-  // Memoize CSV data generation for performance
+  // Memoize comprehensive CSV data generation for all features
   const { csvData, csvHeaders } = useMemo(() => {
-    const data = vendors.map(vendor => ({
-      Symbol: vendor.symbol,
-      Name: vendor.name,
-      'Market Cap': formatCurrency(vendor.market_cap),
-      'P/E Ratio': vendor.pe_ratio > 0 ? formatNumber(vendor.pe_ratio, 2) : 'N/A',
-      EBITDA: formatCurrency(vendor.ebitda),
-    }));
+    const data = vendors.map(vendor => {
+      const contractReadiness = getContractReadiness(vendor);
+      const weatherExposure = getWeatherExposure(vendor);
+      const salesOpportunity = getSalesOpportunity(vendor);
+      const alerts = getFinancialAlerts(vendor);
+      const peerComparison = getPeerComparison(vendor);
+
+      return {
+        Symbol: vendor.symbol,
+        'Company Name': vendor.name,
+        'Market Cap': formatCurrency(vendor.market_cap),
+        'P/E Ratio': vendor.pe_ratio > 0 ? formatNumber(vendor.pe_ratio, 2) : 'N/A',
+        'EBITDA': formatCurrency(vendor.ebitda),
+        'Contract Readiness Score': contractReadiness.score,
+        'Contract Readiness Label': contractReadiness.label,
+        'Weather Exposure Level': weatherExposure.level,
+        'Weather Exposure Sector': weatherExposure.sectors,
+        'Sales Priority': salesOpportunity.priority,
+        'Sales Reasoning': salesOpportunity.reason,
+        'Financial Alerts Count': alerts.length,
+        'Top Alert': alerts.length > 0 ? alerts[0].title : 'None',
+        'Alert Severity': alerts.length > 0 ? alerts[0].severity : 0,
+        'Industry Classification': peerComparison.industry.industry,
+        'Industry Sector': peerComparison.industry.sector,
+        'Industry P/E Average': formatNumber(peerComparison.industry.avgPeRatio, 1),
+        'Industry Market Cap Average': `$${formatNumber(peerComparison.industry.avgMarketCap, 1)}B`,
+        'P/E Percentile': formatNumber(peerComparison.pePercentile, 0),
+        'Market Cap Percentile': formatNumber(peerComparison.marketCapPercentile, 0),
+        'Overall Industry Ranking': peerComparison.overallRanking,
+        'Key Insights': peerComparison.insights.join(' | ')
+      };
+    });
 
     const headers = [
       { label: 'Symbol', key: 'Symbol' },
-      { label: 'Name', key: 'Name' },
+      { label: 'Company Name', key: 'Company Name' },
       { label: 'Market Cap', key: 'Market Cap' },
       { label: 'P/E Ratio', key: 'P/E Ratio' },
       { label: 'EBITDA', key: 'EBITDA' },
+      { label: 'Contract Readiness Score', key: 'Contract Readiness Score' },
+      { label: 'Contract Readiness Label', key: 'Contract Readiness Label' },
+      { label: 'Weather Exposure Level', key: 'Weather Exposure Level' },
+      { label: 'Weather Exposure Sector', key: 'Weather Exposure Sector' },
+      { label: 'Sales Priority', key: 'Sales Priority' },
+      { label: 'Sales Reasoning', key: 'Sales Reasoning' },
+      { label: 'Financial Alerts Count', key: 'Financial Alerts Count' },
+      { label: 'Top Alert', key: 'Top Alert' },
+      { label: 'Alert Severity', key: 'Alert Severity' },
+      { label: 'Industry Classification', key: 'Industry Classification' },
+      { label: 'Industry Sector', key: 'Industry Sector' },
+      { label: 'Industry P/E Average', key: 'Industry P/E Average' },
+      { label: 'Industry Market Cap Average', key: 'Industry Market Cap Average' },
+      { label: 'P/E Percentile', key: 'P/E Percentile' },
+      { label: 'Market Cap Percentile', key: 'Market Cap Percentile' },
+      { label: 'Overall Industry Ranking', key: 'Overall Industry Ranking' },
+      { label: 'Key Insights', key: 'Key Insights' }
     ];
 
     return { csvData: data, csvHeaders: headers };
@@ -133,23 +175,23 @@ function App() {
             </div>
             <div className="flex items-center space-x-4">
               {/* View Mode Toggle */}
-              <div className="flex items-center bg-slate-100 rounded-lg p-1">
+              <div className="flex items-center rounded-lg p-1">
                 <Button
                   variant={viewMode === 'classic' ? 'primary' : 'outline'}
-                  size="sm"
+                  size="default"
                   onClick={() => setViewMode('classic')}
-                  className="h-8"
+                  className="h-10 px-4 text-base"
                 >
-                  <Grid className="h-4 w-4 mr-1" />
+                  <Grid className="h-5 w-5 mr-2" />
                   Classic
                 </Button>
                 <Button
                   variant={viewMode !== 'classic' ? 'primary' : 'outline'}
-                  size="sm"
+                  size="default"
                   onClick={() => setViewMode('analytics')}
-                  className="h-8"
+                  className="h-10 px-4 text-base"
                 >
-                  <BarChart3 className="h-4 w-4 mr-1" />
+                  <BarChart3 className="h-5 w-5 mr-2" />
                   Analytics
                 </Button>
               </div>

@@ -8,6 +8,8 @@ import { FilterPanel, FilterState, defaultFilterState } from './FilterPanel';
 import { ExportTools } from './ExportTools';
 import { WeatherFinanceInsights } from '../weather-finance/WeatherFinanceInsights';
 import { VendorDeepDiveModal } from '../dashboard/VendorDeepDiveModal';
+import { FinancialHealthAlerts } from './FinancialHealthAlerts';
+import { PeerComparison } from './PeerComparison';
 import { vendorApi } from '../../lib/api';
 import { useMockMode } from '../../hooks/useMockMode';
 import { VendorOverview } from '../../types/vendor';
@@ -237,6 +239,16 @@ export function AnalyticsDashboard({
                   onExport={handleExportData}
                   title="Vendor Performance Analysis"
                 />
+
+                {/* Financial Health Alerts */}
+                {filteredVendors.length > 0 && (
+                  <FinancialHealthAlerts vendors={filteredVendors} />
+                )}
+
+                {/* Peer Comparison & Industry Benchmarking */}
+                {filteredVendors.length > 0 && (
+                  <PeerComparison vendors={filteredVendors} />
+                )}
 
                 {/* Weather Finance Risk Assessment */}
                 {filteredVendors.length > 0 && (
