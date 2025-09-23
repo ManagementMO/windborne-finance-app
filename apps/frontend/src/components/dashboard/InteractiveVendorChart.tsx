@@ -180,34 +180,55 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      const barColor = getBarColor(chartData.findIndex(item => item.symbol === data.symbol));
+
       return (
-        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-slate-800 mb-2">{data.fullName}</p>
-          <p className="text-xs text-slate-500 mb-3">{data.symbol}</p>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">Market Cap:</span>
-              <span className="text-sm font-medium">{formatCurrency(data.marketCap)}</span>
+        <div className="bg-white/95 backdrop-blur-sm p-5 border border-slate-200 rounded-xl shadow-xl min-w-[280px]">
+          {/* Header with company info */}
+          <div className="flex items-center gap-3 mb-4">
+            <div
+              className="w-4 h-4 rounded-full shadow-sm"
+              style={{ backgroundColor: barColor }}
+            />
+            <div>
+              <p className="font-bold text-slate-800 text-base leading-tight">{data.fullName}</p>
+              <p className="text-sm text-slate-500 font-medium">{data.symbol}</p>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">P/E Ratio:</span>
-              <span className="text-sm font-medium">
+          </div>
+
+          {/* Key metrics grid */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-slate-50 rounded-lg p-3">
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">Market Cap</p>
+              <p className="text-sm font-bold text-slate-800">{formatCurrency(data.marketCap)}</p>
+            </div>
+            <div className="bg-slate-50 rounded-lg p-3">
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">P/E Ratio</p>
+              <p className="text-sm font-bold text-slate-800">
                 {data.peRatio > 0 ? formatNumber(data.peRatio, 2) : 'N/A'}
-              </span>
+              </p>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">EBITDA:</span>
-              <span className="text-sm font-medium">{formatCurrency(data.ebitda)}</span>
-            </div>
-            <hr className="my-2" />
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-semibold text-blue-700">
-                {getChartMetricLabel(selectedMetric)}:
-              </span>
-              <span className="text-sm font-bold text-blue-800">
-                {formatChartMetricValue(data.value, selectedMetric)}
-              </span>
-            </div>
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-3 mb-4">
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1">EBITDA</p>
+            <p className="text-sm font-bold text-slate-800">{formatCurrency(data.ebitda)}</p>
+          </div>
+
+          {/* Highlighted selected metric */}
+          <div
+            className="rounded-lg p-4 border-l-4"
+            style={{
+              backgroundColor: `${barColor}15`,
+              borderLeftColor: barColor
+            }}
+          >
+            <p className="text-sm font-bold mb-1" style={{ color: barColor }}>
+              {getChartMetricLabel(selectedMetric)}
+            </p>
+            <p className="text-lg font-bold text-slate-800">
+              {formatChartMetricValue(data.value, selectedMetric)}
+            </p>
           </div>
         </div>
       );
@@ -418,32 +439,55 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
         )}
 
         {/* Chart Container */}
-        <div className="bg-white rounded-lg border border-slate-200">
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl border border-slate-200 shadow-sm p-6">
           {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={400}>
+            <ResponsiveContainer width="100%" height={420}>
               <BarChart
                 data={chartData}
                 margin={{
-                  top: 20,
-                  right: 30,
-                  left: 20,
-                  bottom: 60,
+                  top: 30,
+                  right: 40,
+                  left: 30,
+                  bottom: 70,
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                {/* Enhanced Grid */}
+                <CartesianGrid
+                  strokeDasharray="2 2"
+                  stroke="#e2e8f0"
+                  strokeOpacity={0.6}
+                  horizontal={true}
+                  vertical={false}
+                />
+
+                {/* Gradient Definitions */}
+                <defs>
+                  {chartData.map((_, index) => (
+                    <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={getBarColor(index)} stopOpacity={1} />
+                      <stop offset="100%" stopColor={getBarColor(index)} stopOpacity={0.7} />
+                    </linearGradient>
+                  ))}
+                </defs>
+
+                {/* Enhanced X-Axis */}
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12, fill: '#64748b' }}
-                  axisLine={{ stroke: '#e2e8f0' }}
-                  tickLine={{ stroke: '#e2e8f0' }}
-                  angle={-45}
+                  tick={{ fontSize: 13, fill: '#475569', fontWeight: 500 }}
+                  axisLine={{ stroke: '#cbd5e1', strokeWidth: 1.5 }}
+                  tickLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+                  angle={-35}
                   textAnchor="end"
-                  height={80}
+                  height={90}
+                  interval={0}
                 />
+
+                {/* Enhanced Y-Axis */}
                 <YAxis
-                  tick={{ fontSize: 12, fill: '#64748b' }}
-                  axisLine={{ stroke: '#e2e8f0' }}
-                  tickLine={{ stroke: '#e2e8f0' }}
+                  tick={{ fontSize: 12, fill: '#64748b', fontWeight: 500 }}
+                  axisLine={{ stroke: '#cbd5e1', strokeWidth: 1.5 }}
+                  tickLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+                  width={80}
                   tickFormatter={(value) => {
                     if (selectedMetric === 'market_cap' || selectedMetric === 'ebitda') {
                       if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
@@ -454,15 +498,26 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
                     return value.toString();
                   }}
                 />
-                <Tooltip content={<CustomTooltip />} />
+
+                {/* Custom Tooltip - No Background Hover */}
+                <Tooltip
+                  content={<CustomTooltip />}
+                  cursor={false}
+                />
+
+                {/* Enhanced Bars with Gradients */}
                 <Bar
                   dataKey="value"
-                  radius={[4, 4, 0, 0]}
-                  stroke="#fff"
-                  strokeWidth={1}
+                  radius={[6, 6, 0, 0]}
+                  stroke="rgba(255, 255, 255, 0.8)"
+                  strokeWidth={2}
                 >
                   {chartData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={getBarColor(index)} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={`url(#gradient-${index})`}
+                      className="hover:opacity-90 transition-opacity duration-200"
+                    />
                   ))}
                 </Bar>
               </BarChart>
