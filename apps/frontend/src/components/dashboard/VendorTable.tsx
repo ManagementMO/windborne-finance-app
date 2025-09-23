@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { VendorOverview } from '../../types/vendor';
 import { Badge } from '../ui/Badge';
 import { TableRowSkeleton } from '../ui/Skeleton';
-import { formatCurrency, formatNumber, getHealthFlags, getContractReadiness, getWeatherExposure, getSalesOpportunity } from '../../lib/utils';
+import { formatCurrency, formatNumber, getContractReadiness, getWeatherExposure, getSalesOpportunity } from '../../lib/utils';
 
 interface VendorTableProps {
   vendors: VendorOverview[];
