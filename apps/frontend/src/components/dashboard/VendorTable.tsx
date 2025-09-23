@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { VendorOverview } from '../../types/vendor';
 import { Badge } from '../ui/Badge';
 import { TableRowSkeleton } from '../ui/Skeleton';
-import { formatCurrency, formatNumber, getHealthFlags } from '../../lib/utils';
+import { formatCurrency, formatNumber, getHealthFlags, getContractReadiness, getWeatherExposure, getSalesOpportunity } from '../../lib/utils';
 
 interface VendorTableProps {
   vendors: VendorOverview[];
@@ -32,7 +32,13 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                   EBITDA
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Health Flags
+                  Contract Readiness
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Weather Exposure
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Sales Priority
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Action
@@ -71,7 +77,13 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                   EBITDA
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Health Flags
+                  Contract Readiness
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Weather Exposure
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Sales Priority
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Action
@@ -80,7 +92,9 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
               {vendors.map((vendor) => {
-                const healthFlags = getHealthFlags(vendor);
+                const contractReadiness = getContractReadiness(vendor);
+                const weatherExposure = getWeatherExposure(vendor);
+                const salesOpportunity = getSalesOpportunity(vendor);
                 return (
                   <tr
                     key={vendor.symbol}
@@ -107,16 +121,27 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                       {formatCurrency(vendor.ebitda)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-wrap gap-1">
-                        {healthFlags.length > 0 ? (
-                          healthFlags.map((flag, index) => (
-                            <Badge key={index} variant={flag.type}>
-                              {flag.label}
-                            </Badge>
-                          ))
-                        ) : (
-                          <Badge variant="info">Healthy</Badge>
-                        )}
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="info" className={`text-xs ${contractReadiness.color}`}>
+                          {contractReadiness.score}
+                        </Badge>
+                        <span className="text-xs text-slate-500">{contractReadiness.label}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="warning" className={`text-xs ${weatherExposure.color}`}>
+                          {weatherExposure.level}
+                        </Badge>
+                        <span className="text-xs text-slate-500">{weatherExposure.sectors}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="error" className={`text-xs ${salesOpportunity.color}`}>
+                          {salesOpportunity.priority}
+                        </Badge>
+                        <span className="text-xs text-slate-500">{salesOpportunity.reason}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -142,7 +167,9 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-4">
         {vendors.map((vendor) => {
-          const healthFlags = getHealthFlags(vendor);
+          const contractReadiness = getContractReadiness(vendor);
+          const weatherExposure = getWeatherExposure(vendor);
+          const salesOpportunity = getSalesOpportunity(vendor);
           return (
             <div
               key={vendor.symbol}
@@ -165,7 +192,7 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider">Market Cap</p>
@@ -182,17 +209,33 @@ export function VendorTable({ vendors, isLoading, onRemoveVendor, onVendorClick 
                   <p className="text-sm font-medium text-slate-800">{formatCurrency(vendor.ebitda)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">Health</p>
-                  <div className="flex flex-wrap gap-1">
-                    {healthFlags.length > 0 ? (
-                      healthFlags.map((flag, index) => (
-                        <Badge key={index} variant={flag.type}>
-                          {flag.label}
-                        </Badge>
-                      ))
-                    ) : (
-                      <Badge variant="info">Healthy</Badge>
-                    )}
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Contract Status</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="info" className={`text-xs ${contractReadiness.color}`}>
+                      {contractReadiness.score}
+                    </Badge>
+                    <span className="text-xs text-slate-500">{contractReadiness.label}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Weather Risk</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="warning" className={`text-xs ${weatherExposure.color}`}>
+                      {weatherExposure.level}
+                    </Badge>
+                    <span className="text-xs text-slate-500">{weatherExposure.sectors}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Sales Priority</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="error" className={`text-xs ${salesOpportunity.color}`}>
+                      {salesOpportunity.priority}
+                    </Badge>
+                    <span className="text-xs text-slate-500">{salesOpportunity.reason}</span>
                   </div>
                 </div>
               </div>
