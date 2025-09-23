@@ -148,29 +148,6 @@ export function AnalyticsDashboard({
     vendorQueries.forEach(query => query.refetch());
   }, [vendorQueries]);
 
-  const handleExportData = useCallback(() => {
-    const csvContent = [
-      ['Symbol', 'Company Name', 'Market Cap', 'P/E Ratio', 'EBITDA'],
-      ...filteredVendors.map(vendor => [
-        vendor.symbol,
-        vendor.name,
-        formatCurrency(vendor.market_cap),
-        vendor.pe_ratio > 0 ? formatNumber(vendor.pe_ratio, 2) : 'N/A',
-        formatCurrency(vendor.ebitda),
-      ])
-    ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `analytics_export_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [filteredVendors]);
-
   const handleVendorClick = useCallback((vendor: VendorOverview) => {
     setSelectedVendor(vendor);
     setIsModalOpen(true);
@@ -190,7 +167,6 @@ export function AnalyticsDashboard({
   return (
     <>
       <DashboardLayout
-        onExportData={handleExportData}
         onRefreshData={handleRefreshData}
         onToggleFilters={handleToggleFilters}
         onBackToClassic={onBackToClassic}
@@ -236,7 +212,6 @@ export function AnalyticsDashboard({
                 <AdvancedDataTable
                   data={filteredVendors}
                   onRowClick={handleVendorClick}
-                  onExport={handleExportData}
                   title="Vendor Performance Analysis"
                 />
 

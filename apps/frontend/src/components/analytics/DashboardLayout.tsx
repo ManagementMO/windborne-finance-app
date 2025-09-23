@@ -4,7 +4,6 @@ import { Button } from '../ui/Button';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  onExportData?: () => void;
   onRefreshData?: () => void;
   onToggleFilters?: () => void;
   onBackToClassic?: () => void;
@@ -13,7 +12,6 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({
   children,
-  onExportData,
   onRefreshData,
   onToggleFilters,
   onBackToClassic,
@@ -59,10 +57,6 @@ export function DashboardLayout({
             <Button variant="ghost" size="sm" onClick={onRefreshData}>
               <RefreshCw className="h-4 w-4 mr-1" />
               Refresh
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onExportData}>
-              <Download className="h-4 w-4 mr-1" />
-              Export
             </Button>
           </div>
         </div>

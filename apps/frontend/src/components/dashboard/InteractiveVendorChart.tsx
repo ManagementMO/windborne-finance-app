@@ -170,30 +170,6 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
     };
   }, [chartData]);
 
-  const exportData = () => {
-    const csvContent = [
-      ['Company', 'Symbol', 'Market Cap', 'P/E Ratio', 'EBITDA', `Selected Metric (${getChartMetricLabel(selectedMetric)})`],
-      ...chartData.map(item => [
-        item.fullName,
-        item.symbol,
-        formatCurrency(item.marketCap),
-        item.peRatio > 0 ? formatNumber(item.peRatio, 2) : 'N/A',
-        formatCurrency(item.ebitda),
-        formatChartMetricValue(item.value, selectedMetric)
-      ])
-    ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `vendor_bar_chart_${selectedMetric}_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -305,10 +281,6 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
             <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
               <Filter className="h-4 w-4 mr-1" />
               {showFilters ? 'Hide' : 'Show'} Filters
-            </Button>
-            <Button variant="outline" size="sm" onClick={exportData}>
-              <Download className="h-4 w-4 mr-1" />
-              Export
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowInsights(!showInsights)}>
               <Eye className="h-4 w-4 mr-1" />

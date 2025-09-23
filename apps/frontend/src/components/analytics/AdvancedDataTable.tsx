@@ -20,7 +20,6 @@ import { formatCurrency, formatNumber } from '../../lib/utils';
 interface AdvancedDataTableProps {
   data: VendorOverview[];
   onRowClick?: (row: VendorOverview) => void;
-  onExport?: (data: VendorOverview[]) => void;
   title?: string;
 }
 
@@ -29,7 +28,6 @@ const columnHelper = createColumnHelper<VendorOverview>();
 export function AdvancedDataTable({
   data,
   onRowClick,
-  onExport,
   title = "Vendor Data Analysis"
 }: AdvancedDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -156,11 +154,6 @@ export function AdvancedDataTable({
     },
   });
 
-  const handleExport = () => {
-    const visibleData = table.getFilteredRowModel().rows.map(row => row.original);
-    onExport?.(visibleData);
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -176,10 +169,6 @@ export function AdvancedDataTable({
                 className="pl-9 pr-3 py-2 border border-slate-200 rounded-md text-sm w-64"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-1" />
-              Export
-            </Button>
           </div>
         </div>
       </CardHeader>

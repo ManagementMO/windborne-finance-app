@@ -248,7 +248,7 @@ function App() {
                   filename={`windborne-vendors-${new Date().toISOString().split('T')[0]}.csv`}
                   className="inline-flex"
                 >
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="font-semibold border-2 border-slate-300 hover:scale-105 hover:shadow-md transition-all duration-200">
                     <Download className="h-4 w-4 mr-2" />
                     Export CSV
                   </Button>
