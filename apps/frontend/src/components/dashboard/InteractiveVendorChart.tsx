@@ -260,6 +260,22 @@ export function InteractiveVendorChart({ vendors, isLoading }: InteractiveVendor
   return (
     <Card>
       <CardHeader>
+        <div className="flex items-start justify-between mb-2">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs max-w-2xl">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-blue-600">📊</span>
+              <span className="font-semibold text-blue-800">Data Sources</span>
+            </div>
+            <div className="text-blue-700 leading-relaxed space-y-1">
+              <p>
+                <span className="font-medium">Real API Data:</span> Market cap, EBITDA, P/E ratios from Alpha Vantage
+              </p>
+              <p>
+                <span className="font-medium">Proof-of-Concept:</span> WindBorne sales assessments, weather risk algorithms & analytics dashboard (time constraints - but using real API data where possible)
+              </p>
+            </div>
+          </div>
+        </div>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-blue-600" />
