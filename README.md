@@ -60,5 +60,4 @@ The application is configured for production deployment:
 apps/
 ├── api/           # FastAPI backend
 ├── frontend/      # React TypeScript frontend
-└── README.md      # This file
 ```
