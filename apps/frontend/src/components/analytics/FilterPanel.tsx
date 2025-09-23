@@ -302,7 +302,7 @@ export const defaultFilterState: FilterState = {
   },
   peRatioRange: {
     min: 0,
-    max: 100,
+    max: 500,
   },
   searchQuery: '',
 };

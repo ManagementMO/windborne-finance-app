@@ -44,7 +44,12 @@ export function AnalyticsDashboard({
   // Process and filter vendor data
   const { vendors, filteredVendors } = useMemo(() => {
     const allVendors = vendorQueries
-      .map(query => query.data)
+      .map((query, index) => {
+        if (query.error) {
+          console.warn(`Failed to fetch data for ${activeTickers[index]}:`, query.error);
+        }
+        return query.data;
+      })
       .filter((vendor): vendor is VendorOverview => {
         return vendor !== undefined &&
           typeof vendor.symbol === 'string' &&
@@ -52,6 +57,7 @@ export function AnalyticsDashboard({
           typeof vendor.name === 'string' &&
           vendor.name.length > 0;
       });
+
 
     // Apply filters
     const filtered = allVendors.filter(vendor => {
@@ -70,16 +76,18 @@ export function AnalyticsDashboard({
         return false;
       }
 
-      // P/E ratio filter
+      // P/E ratio filter - include companies with P/E = 0 (no earnings data)
       if (vendor.pe_ratio > 0) {
         if (vendor.pe_ratio < filters.peRatioRange.min ||
             vendor.pe_ratio > filters.peRatioRange.max) {
           return false;
         }
       }
+      // Companies with P/E = 0 are always included (they have no earnings or N/A data)
 
       return true;
     });
+
 
     return { vendors: allVendors, filteredVendors: filtered };
   }, [vendorQueries, filters]);
@@ -172,6 +180,10 @@ export function AnalyticsDashboard({
   }, []);
 
   const isLoading = vendorQueries.some(query => query.isLoading);
+  const hasErrors = vendorQueries.some(query => query.error);
+  const failedVendors = vendorQueries
+    .map((query, index) => query.error ? activeTickers[index] : null)
+    .filter(Boolean);
 
   return (
     <>
@@ -210,21 +222,12 @@ export function AnalyticsDashboard({
                 <KPIGrid kpis={kpiData} cols={4} />
 
                 {/* Charts Row */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <div ref={chartRef} className="min-w-0">
-                    <MultiMetricChart
-                      data={filteredVendors}
-                      title="Financial Metrics Analysis"
-                      defaultChartType="composed"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <MultiMetricChart
-                      data={filteredVendors}
-                      title="Market Distribution"
-                      defaultChartType="pie"
-                    />
-                  </div>
+                <div ref={chartRef} className="min-w-0">
+                  <MultiMetricChart
+                    data={filteredVendors}
+                    title="Financial Metrics Analysis"
+                    defaultChartType="composed"
+                  />
                 </div>
 
                 {/* Advanced Data Table */}
@@ -242,23 +245,6 @@ export function AnalyticsDashboard({
                   />
                 )}
 
-                {/* Additional Analytics Charts */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <div className="min-w-0">
-                    <MultiMetricChart
-                      data={filteredVendors}
-                      title="Financial Performance Overview"
-                      defaultChartType="composed"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <MultiMetricChart
-                      data={filteredVendors}
-                      title="Valuation Analysis"
-                      defaultChartType="bar"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -273,8 +259,54 @@ export function AnalyticsDashboard({
             </div>
           )}
 
-          {/* Empty State */}
-          {!isLoading && filteredVendors.length === 0 && vendors.length > 0 && (
+          {/* Error State */}
+          {hasErrors && (
+            <div className="text-center py-12">
+              <div className="text-red-400 mb-4">
+                <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-slate-800 mb-2">
+                Failed to load some vendor data
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Could not fetch data for: {failedVendors.join(', ')}
+              </p>
+              <button
+                onClick={handleRefreshData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Retry Loading
+              </button>
+            </div>
+          )}
+
+          {/* No Data State */}
+          {!isLoading && !hasErrors && vendors.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-slate-400 mb-4">
+                <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-slate-800 mb-2">
+                No vendor data available
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Unable to load any vendor information. Please check your connection and try again.
+              </p>
+              <button
+                onClick={handleRefreshData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Retry Loading
+              </button>
+            </div>
+          )}
+
+          {/* Empty Filter State */}
+          {!isLoading && !hasErrors && filteredVendors.length === 0 && vendors.length > 0 && (
             <div className="text-center py-12">
               <div className="text-slate-400 mb-4">
                 <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
