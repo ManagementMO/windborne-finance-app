@@ -13,7 +13,6 @@ import { PeerComparison } from './PeerComparison';
 import { vendorApi } from '../../lib/api';
 import { useMockMode } from '../../hooks/useMockMode';
 import { VendorOverview } from '../../types/vendor';
-import { formatCurrency, formatNumber } from '../../lib/utils';
 
 interface AnalyticsDashboardProps {
   initialTickers?: string[];

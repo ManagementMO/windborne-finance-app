@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Grid, BarChart3, Settings, Filter, Download, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Grid, BarChart3, Settings, Filter, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface DashboardLayoutProps {

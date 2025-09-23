@@ -10,7 +10,7 @@ import {
   SortingState,
   ColumnFiltersState,
 } from '@tanstack/react-table';
-import { ChevronUp, ChevronDown, Search, Download, Eye } from 'lucide-react';
+import { ChevronUp, ChevronDown, Search, Eye } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card, CardHeader, CardContent, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';

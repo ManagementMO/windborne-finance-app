@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 import {
-  BarChart3, Filter, Download, Eye, ArrowUpDown, ArrowUp, ArrowDown,
+  BarChart3, Filter, Eye, ArrowUpDown, ArrowUp, ArrowDown,
   Target, DollarSign, Percent, TrendingUp, Palette
 } from 'lucide-react';
 import { VendorOverview, ChartMetric } from '../../types/vendor';
