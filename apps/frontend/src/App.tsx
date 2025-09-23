@@ -178,7 +178,7 @@ function App() {
               <div className="flex items-center rounded-lg p-1">
                 <Button
                   variant={viewMode === 'classic' ? 'primary' : 'outline'}
-                  size="md"
+                  size="lg"
                   onClick={() => setViewMode('classic')}
                   className="h-10 px-4 text-base"
                 >
@@ -187,7 +187,7 @@ function App() {
                 </Button>
                 <Button
                   variant={viewMode !== 'classic' ? 'primary' : 'outline'}
-                  size="md"
+                  size="lg"
                   onClick={() => setViewMode('analytics')}
                   className="h-10 px-4 text-base"
                 >
