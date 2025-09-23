@@ -169,9 +169,14 @@ function App() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
               <Cloud className="h-8 w-8 text-blue-600" />
-              <h1 className="text-xl font-semibold text-slate-800">
-                WindBorne Vendor Dashboard
-              </h1>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-semibold text-slate-800">
+                  WindBorne Vendor Dashboard
+                </h1>
+                <p className="text-xs text-slate-500">
+                  💡 Backend hosted on Render - reload page if data doesn't load
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               {/* View Mode Toggle */}
