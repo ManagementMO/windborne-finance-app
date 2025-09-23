@@ -54,6 +54,7 @@ The application is configured for production deployment:
 ## Data Sources
 
 **Real API Data**: Market capitalization, EBITDA, P/E ratios sourced from Alpha Vantage
+
 **Proof-of-Concept**: WindBorne sales assessments, weather risk algorithms, and advanced analytics (time constraints but using real API data where possible)
 
 ## Project Structure
